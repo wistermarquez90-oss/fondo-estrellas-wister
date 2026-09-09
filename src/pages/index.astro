@@ -6,32 +6,45 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
-    <title>Espacio Profundo Wister</title>
+    <title>Feliz Cumpleaños Annarella</title>
   </head>
   <body>
+    <!-- Capa 0: Nebulosa y Planetas -->
     <div class="nebulosa"></div>
+    <div class="planeta-gigante"></div>
+    <div class="luna-lejana"></div>
+    
+    <!-- Capa 1: Lluvia de estrellas y meteoritos -->
     <div class="estrella-fugaz fugaz-1"></div>
     <div class="estrella-fugaz fugaz-2"></div>
+    <div class="estrella-fugaz fugaz-3"></div>
+    <div class="meteorito"></div>
 
+    <!-- Capa 2: La foto de la cumpleañera (Oculta al inicio) -->
+    <img src="/foto-annarella.jpg" alt="Annarella" id="foto-annarella" />
+
+    <!-- Capa 3: El lienzo de estrellas dinámicas -->
     <canvas id="universo"></canvas>
 
     <main class="contenedor-scroll">
       <div class="indicador">
-        <h1>Baja para ver la magia 👇</h1>
+        <h1>Baja para ver la sorpresa 👇</h1>
       </div>
     </main>
 
     <script>
       const canvas = document.getElementById('universo');
       const ctx = canvas.getContext('2d');
-      let width, height;
+      const foto = document.getElementById('foto-annarella');
       
+      let width, height;
       let estrellasFondo = []; 
       let estrellasDinamicas = []; 
       let puntosTexto = [];
       let progresoScroll = 0;
 
-      const FRASE = "WISTER"; 
+      // El texto ahora tiene un salto de línea (\n)
+      const FRASE = "FELIZ CUMPLEAÑOS\nANNARELLA"; 
 
       function iniciar() {
         width = canvas.width = window.innerWidth;
@@ -47,16 +60,25 @@
         canvasTemp.height = height;
 
         ctxTemp.fillStyle = 'white';
-        ctxTemp.font = '900 18vw sans-serif'; 
+        // Letra un poco más pequeña para que quepa la frase larga
+        ctxTemp.font = '900 7vw sans-serif'; 
         ctxTemp.textAlign = 'center';
         ctxTemp.textBaseline = 'middle';
-        ctxTemp.fillText(texto, width / 2, height / 2);
+        
+        // Separamos el texto en dos líneas
+        const lineas = texto.split('\n');
+        // Colocamos el texto en el 75% de la pantalla (abajo) para dejar la foto en el centro
+        const startY = height * 0.75; 
+        const lineHeight = height * 0.10; // Espaciado entre líneas
+
+        lineas.forEach((linea, index) => {
+          ctxTemp.fillText(linea, width / 2, startY + (index * lineHeight));
+        });
 
         const data = ctxTemp.getImageData(0, 0, width, height).data;
         puntosTexto = [];
         
-        // OPTIMIZACIÓN 1: Saltamos de 10 en 10 píxeles. 
-        // Crea muchas menos estrellas (es súper ligero) pero mantiene la legibilidad.
+        // Escáner optimizado (salta de 10 en 10 píxeles)
         for (let y = 0; y < height; y += 10) {
           for (let x = 0; x < width; x += 10) {
             const alpha = data[(y * width + x) * 4 + 3];
@@ -71,20 +93,17 @@
         estrellasFondo = [];
         estrellasDinamicas = [];
 
-        // Capa 1: Fondo estático ligero
         for (let i = 0; i < 350; i++) {
           estrellasFondo.push({
             x: Math.random() * width,
             y: Math.random() * height,
-            tamano: Math.random() * 1.2, 
+            tamano: Math.random() * 1.5, 
             faseBrillo: Math.random() * Math.PI * 2,
             velocidadBrillo: Math.random() * 0.5 + 0.2 
           });
         }
 
-        // Capa 2: Estrellas que forman la palabra
-        // Ahora solo creamos estrictamente las necesarias para formar el texto, más un pequeño extra
-        const numDinamicas = Math.max(puntosTexto.length, 300); 
+        const numDinamicas = Math.max(puntosTexto.length, 400); 
         for (let i = 0; i < numDinamicas; i++) {
           const destino = puntosTexto[i] || {
             x: Math.random() * width,
@@ -115,19 +134,25 @@
         let progresoAcelerado = Math.min(progresoScroll * 2, 1);
         let interpolacion = 1 - Math.pow(1 - progresoAcelerado, 3);
 
-        // OPTIMIZACIÓN 2: Eliminamos completamente todos los shadowBlur y shadowColor
+        // Controlar la aparición de la foto
+        if (progresoAcelerado > 0.4) {
+           // Transición matemática suave de 0 a 1
+           let progresoFoto = Math.min((progresoAcelerado - 0.4) * 1.66, 1);
+           foto.style.opacity = progresoFoto;
+           foto.style.transform = `translate(-50%, -50%) scale(${0.7 + (progresoFoto * 0.3)})`;
+        } else {
+           foto.style.opacity = 0;
+           foto.style.transform = `translate(-50%, -50%) scale(0.7)`;
+        }
 
-        // --- DIBUJAR CAPA 1 ---
         estrellasFondo.forEach(estrella => {
           let oscilacion = Math.sin(tiempo * estrella.velocidadBrillo + estrella.faseBrillo);
           ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + (oscilacion * 0.4)})`;
-          
           ctx.beginPath();
           ctx.arc(estrella.x, estrella.y, estrella.tamano, 0, Math.PI * 2);
           ctx.fill();
         });
 
-        // --- DIBUJAR CAPA 2 ---
         estrellasDinamicas.forEach(estrella => {
           let xActual = estrella.xInicial + (estrella.xDestino - estrella.xInicial) * interpolacion;
           let yActual = estrella.yInicial + (estrella.yDestino - estrella.yInicial) * interpolacion;
@@ -136,14 +161,12 @@
           let tamanoActual = estrella.tamanoBase + (oscilacion * 0.3);
 
           if (estrella.formaTexto && progresoAcelerado > 0.6) {
-            // Efecto de resplandor falso muy rápido de renderizar
-            ctx.fillStyle = `rgba(0, 242, 254, ${progresoAcelerado * 0.3})`; 
+            ctx.fillStyle = `rgba(255, 105, 180, ${progresoAcelerado * 0.4})`; // Resplandor rosa espacial
             ctx.beginPath();
             ctx.arc(xActual, yActual, tamanoActual * 3.5, 0, Math.PI * 2);
             ctx.fill();
             
-            // Centro de la estrella
-            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 1)'; // Centro blanco puro
           } else {
             ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + (oscilacion * 0.4)})`;
           }
@@ -167,7 +190,7 @@
   body, html {
     margin: 0;
     padding: 0;
-    background-color: #030509; 
+    background-color: #020306; /* Espacio aún más profundo */
     color: white;
     font-family: sans-serif;
   }
@@ -179,10 +202,54 @@
     width: 100vw;
     height: 100vh;
     background: 
-      radial-gradient(circle at 15% 40%, rgba(31, 23, 76, 0.4) 0%, transparent 40%),
-      radial-gradient(circle at 80% 70%, rgba(16, 52, 92, 0.4) 0%, transparent 50%),
-      radial-gradient(circle at 50% 10%, rgba(8, 23, 48, 0.5) 0%, transparent 60%);
+      radial-gradient(circle at 20% 30%, rgba(55, 20, 80, 0.4) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(20, 60, 100, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 50% 100%, rgba(100, 20, 60, 0.25) 0%, transparent 60%);
     z-index: 0;
+  }
+
+  /* --- NUEVOS ELEMENTOS ESPACIALES --- */
+  .planeta-gigante {
+    position: fixed;
+    top: -5%;
+    right: -5%;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    /* Gradiente simulando un planeta gaseoso iluminado por un sol distante */
+    background: radial-gradient(circle at 30% 70%, #1a202c 0%, #000000 80%);
+    box-shadow: inset -20px -20px 50px rgba(100, 150, 255, 0.2), 0 0 60px rgba(100, 150, 255, 0.1);
+    z-index: 0;
+    opacity: 0.8;
+  }
+
+  .luna-lejana {
+    position: fixed;
+    top: 60%;
+    left: 10%;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 20% 20%, #718096 0%, #1a202c 90%);
+    box-shadow: inset -10px -10px 20px rgba(0,0,0,0.9);
+    z-index: 0;
+  }
+
+  /* --- LA FOTO DE ANNARELLA --- */
+  #foto-annarella {
+    position: fixed;
+    top: 35%; /* Ligeramente arriba del centro para dejar espacio al texto */
+    left: 50%;
+    width: clamp(200px, 40vw, 350px);
+    height: clamp(200px, 40vw, 350px);
+    object-fit: cover;
+    border-radius: 50%;
+    z-index: 2; /* Encima del fondo, debajo del texto */
+    /* Resplandor brillante de cumpleaños espacial */
+    box-shadow: 0 0 40px rgba(255, 105, 180, 0.5), 0 0 100px rgba(0, 242, 254, 0.3);
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    pointer-events: none;
+    opacity: 0; 
   }
 
   #universo {
@@ -191,47 +258,60 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 1;
+    z-index: 3;
     pointer-events: none;
   }
   
-  .estrella-fugaz {
+  /* --- ESTRELLAS FUGACES Y METEORITOS --- */
+  .estrella-fugaz, .meteorito {
     position: fixed;
-    width: 3px;
-    height: 3px;
-    background: white;
     border-radius: 50%;
-    z-index: 0;
+    z-index: 1;
     opacity: 0;
+  }
+  
+  .estrella-fugaz {
+    width: 2px;
+    height: 2px;
+    background: white;
+    box-shadow: 0 0 10px white;
   }
   .estrella-fugaz::after {
     content: '';
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 120px; 
+    width: 100px; 
     height: 1px;
     background: linear-gradient(90deg, rgba(255,255,255,0.8), transparent);
   }
 
-  .fugaz-1 {
-    top: 20%;
-    left: 80%;
-    animation: animarFugaz 8s linear infinite;
-    animation-delay: 2s; 
+  .meteorito {
+    width: 4px;
+    height: 4px;
+    background: #ffdb58;
+    box-shadow: 0 0 20px #ffdb58, 0 0 40px #ff8c00;
+  }
+  .meteorito::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 250px; 
+    height: 3px;
+    background: linear-gradient(90deg, #ff8c00, #ff0000, transparent);
   }
 
-  .fugaz-2 {
-    top: 60%;
-    left: 90%;
-    animation: animarFugaz 15s linear infinite;
-    animation-delay: 7s;
-  }
+  /* Diferentes tiempos y posiciones */
+  .fugaz-1 { top: 20%; left: 80%; animation: animarFugaz 8s linear infinite; animation-delay: 2s; }
+  .fugaz-2 { top: 50%; left: 95%; animation: animarFugaz 12s linear infinite; animation-delay: 5s; }
+  .fugaz-3 { top: 80%; left: 70%; animation: animarFugaz 15s linear infinite; animation-delay: 9s; }
+  .meteorito { top: 10%; left: 110%; animation: animarFugaz 20s linear infinite; animation-delay: 12s; }
 
   @keyframes animarFugaz {
-    0% { transform: translateX(0) translateY(0) rotate(-40deg); opacity: 1; }
+    0% { transform: translateX(0) translateY(0) rotate(-35deg); opacity: 1; }
     5% { opacity: 0; }
-    100% { transform: translateX(-1500px) translateY(1200px) rotate(-40deg); opacity: 0; }
+    100% { transform: translateX(-2000px) translateY(1400px) rotate(-35deg); opacity: 0; }
   }
 
   .contenedor-scroll {
@@ -242,7 +322,7 @@
   
   .indicador {
     position: fixed;
-    top: 15%;
+    top: 10%;
     width: 100%;
     text-align: center;
     pointer-events: none;
