@@ -123,10 +123,9 @@
         const galaxiaGroup = new THREE.Group();
         scene.add(galaxiaGroup);
         galaxiaGroup.visible = false; 
-        galaxiaGroup.position.z = -15; 
-        galaxiaGroup.rotation.x = 0.6; // Inclinación
+        galaxiaGroup.position.z = -25; // LA ALEJAMOS MÁS INICIALMENTE
+        galaxiaGroup.rotation.x = 0.8; // INCLINACIÓN AJUSTADA
         
-        // Shader para Estrellas Perfectas (No más cuadrados)
         const starUniforms = { uTime: { value: 0 } };
         const materialEstrellas = new THREE.ShaderMaterial({
             uniforms: starUniforms,
@@ -138,7 +137,6 @@
                 uniform float uTime;
                 void main() {
                     vColor = color;
-                    // Latido estelar
                     float twinkle = (sin(uTime * 2.0 + phase) + 1.0) * 0.5;
                     vAlpha = 0.4 + (twinkle * 0.6); 
                     
@@ -151,11 +149,9 @@
                 varying vec3 vColor;
                 varying float vAlpha;
                 void main() {
-                    // Dibuja un círculo matemático perfecto
                     float dist = length(gl_PointCoord - vec2(0.5));
                     if (dist > 0.5) discard;
                     
-                    // Centro brillante, bordes suaves
                     float glow = exp(-dist * dist * 15.0); 
                     float finalAlpha = max(glow, 0.2) * vAlpha;
                     
@@ -168,7 +164,6 @@
             vertexColors: true
         });
 
-        // Configuración de la Galaxia
         const countEstrellas = 25000;
         const countPolvo = 8000;
         const radioGalaxia = 25;
@@ -181,24 +176,21 @@
             const sizes = new Float32Array(cantidad);
             const phases = new Float32Array(cantidad);
 
-            const colorNucleo = new THREE.Color(0xfff5e6); // Blanco ultra brillante
+            const colorNucleo = new THREE.Color(0xfff5e6); 
             const colorRosa = new THREE.Color(0xff1493);
             const colorAzul = new THREE.Color(0x00f2fe);
-            const colorBorde = new THREE.Color(0x001133); // Azul muy oscuro para el final
+            const colorBorde = new THREE.Color(0x001133); 
 
             for(let i = 0; i < cantidad; i++) {
-                // Matemáticas: Math.pow(x, 4) concentra el 80% de las estrellas en el núcleo
                 const distribucion = Math.pow(Math.random(), 4); 
                 const radio = distribucion * radioGalaxia; 
                 
                 const angulo = (i % brazos) * ((Math.PI * 2) / brazos);
-                const giro = radio * 0.4; // Curva de los brazos
+                const giro = radio * 0.4; 
                 
-                // Si es polvo cósmico, la dispersión es gigante
                 const dispersionRadio = isDust ? 6.0 : 1.5;
                 const dispersion = (Math.random() - 0.5) * (radio / radioGalaxia) * dispersionRadio;
                 
-                // El centro es "gordo" (Bulge), los bordes son planos
                 const alturaMax = isDust ? 6.0 : 3.0;
                 const alturaBulge = (Math.random() - 0.5) * alturaMax * Math.exp(-radio/3);
 
@@ -206,12 +198,10 @@
                 positions[i*3+1] = alturaBulge;
                 positions[i*3+2] = Math.sin(angulo + giro) * radio + (Math.random()-0.5)*dispersion;
 
-                // Color según distancia: Centro blanco -> Medio Rosa/Azul -> Puntas Oscuras
                 let mixedColor = colorNucleo.clone();
                 if(radio > 1) mixedColor.lerp(i%2==0 ? colorRosa : colorAzul, radio / (radioGalaxia * 0.4));
                 if(radio > radioGalaxia * 0.6) mixedColor.lerp(colorBorde, (radio - radioGalaxia*0.6) / (radioGalaxia*0.4));
 
-                // Atenuar brillo en las puntas para que desaparezca sutilmente
                 let intensidad = Math.max(0.1, 1.2 - (radio / radioGalaxia));
                 mixedColor.multiplyScalar(intensidad);
 
@@ -219,7 +209,6 @@
                 colors[i*3+1] = mixedColor.g;
                 colors[i*3+2] = mixedColor.b;
 
-                // Tamaño: Polvo gigante, estrellas pequeñas.
                 sizes[i] = isDust ? (Math.random() * 8 + 4) : (Math.random() * 2 + 0.5);
                 phases[i] = Math.random() * Math.PI * 2;
             }
@@ -232,7 +221,7 @@
         }
 
         const estrellas = new THREE.Points(crearGeometriaGalaxia(countEstrellas, false), materialEstrellas);
-        const polvo = new THREE.Points(crearGeometriaGalaxia(countPolvo, true), materialEstrellas); // Usamos el mismo shader suavizado
+        const polvo = new THREE.Points(crearGeometriaGalaxia(countPolvo, true), materialEstrellas); 
         
         galaxiaGroup.add(estrellas);
         galaxiaGroup.add(polvo);
@@ -242,12 +231,13 @@
         let basePlanetY = 3;
         let targetPlanetY = basePlanetY;
         
-        let targetGalaxiaZ = -15; 
+        // LA GALAXIA SE ACERCA MENOS (ANTES 0, AHORA -15)
+        let targetGalaxiaZ = -25; 
         
         let tiempoAsteroide = 0;
         let tiempoShader = 0;
         let modoGalaxia = false;
-        let velocidadGalaxia = 0.02; // Inicia rápido por el viaje
+        let velocidadGalaxia = 0.02; 
 
         function actualizarLayout3D() {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -281,7 +271,6 @@
             enViaje = true;
             modoGalaxia = true;
             
-            // Ocultar UI de la Tierra
             document.getElementById('zona-scroll')!.style.display = 'none';
             document.getElementById('ui-textos')!.style.opacity = '0';
             btnGalaxia.style.opacity = '0';
@@ -291,12 +280,11 @@
             document.getElementById('nebulosa')!.style.opacity = '0'; 
             
             galaxiaGroup.visible = true;
-            velocidadGalaxia = 0.02; // Impulso inicial
+            velocidadGalaxia = 0.02; 
             
-            // Mover cámara y planetas
-            targetCameraZ = 3;
-            targetPlanetY = -10; // Hacia abajo
-            targetGalaxiaZ = 0; // Traer la galaxia al frente
+            targetCameraZ = 6; // LA CÁMARA NO SE ACERCA TANTO
+            targetPlanetY = -15; 
+            targetGalaxiaZ = -10; // LA GALAXIA QUEDA MÁS LEJOS PARA APRECIARLA MEJOR
             
             setTimeout(() => {
                 document.getElementById('ui-galaxia')!.classList.remove('oculto-total');
@@ -308,13 +296,11 @@
             if(enViaje) return;
             enViaje = true;
             
-            // Ocultar UI de la Galaxia
             document.getElementById('ui-galaxia')!.classList.add('oculto-total');
             
-            // Mover cámara y planetas de regreso
             targetCameraZ = 12;
             targetPlanetY = basePlanetY;
-            targetGalaxiaZ = -15; // Alejar galaxia
+            targetGalaxiaZ = -30; // ALEJAR GALAXIA
             
             setTimeout(() => {
                 modoGalaxia = false;
@@ -325,23 +311,23 @@
                 document.getElementById('universo-fondo')!.style.opacity = '1';
                 document.getElementById('nebulosa')!.style.opacity = '1'; 
                 
-                // Forzar actualización de scroll
+                // RESTAURAR LA OPACIDAD DE LOS TEXTOS SI ESTABA AL FINAL DEL SCROLL
+                document.getElementById('ui-textos')!.style.opacity = '1';
+                
+                // Forzar actualización de scroll para mostrar los botones correctos
                 window.dispatchEvent(new Event('scroll'));
                 enViaje = false;
             }, 2000);
         });
 
-        // BUCLE DE ANIMACIÓN
         function animate3D() {
           requestAnimationFrame(animate3D);
           
-          // Movimientos suaves de cámara y planetas
           camera.position.z += (targetCameraZ - camera.position.z) * 0.02;
           sistemaPlanetario.position.y += (targetPlanetY - sistemaPlanetario.position.y) * 0.03;
-          asteroid.position.y = sistemaPlanetario.position.y + Math.sin(tiempoAsteroide * 1.5) * 6; // El asteroide sigue la caída
+          asteroid.position.y = sistemaPlanetario.position.y + Math.sin(tiempoAsteroide * 1.5) * 6; 
           galaxiaGroup.position.z += (targetGalaxiaZ - galaxiaGroup.position.z) * 0.02;
 
-          // Animación constante Planetas
           earth.rotation.y += 0.001;       
           clouds.rotation.y += 0.0015; 
           moonPivot.rotation.y += 0.003;   
@@ -353,12 +339,10 @@
           asteroid.rotation.x += 0.02;
           asteroid.rotation.y += 0.01;
 
-          // Animación Galaxia
           if(galaxiaGroup.visible) {
               tiempoShader += 0.01;
               starUniforms.uTime.value = tiempoShader;
               
-              // Frenado físico: Va frenando hasta quedarse casi estática
               velocidadGalaxia += (0.0001 - velocidadGalaxia) * 0.01; 
               galaxiaGroup.rotation.y += velocidadGalaxia;
           }
@@ -400,7 +384,6 @@
       }
 
       window.addEventListener('scroll', () => {
-        // Evitamos que el scroll haga cosas raras mientras estamos en la galaxia
         if(document.getElementById('ui-galaxia')!.classList.contains('oculto-total') === false) return;
 
         const scrollMaximo = document.body.scrollHeight - window.innerHeight;
@@ -512,7 +495,7 @@
   .ui-galaxia {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     z-index: 60; display: flex; flex-direction: column; justify-content: center; align-items: center;
-    background: radial-gradient(circle, rgba(0,0,0,0.4) 0%, transparent 80%);
+    background: radial-gradient(circle, rgba(0,0,0,0.6) 0%, transparent 90%);
     transition: opacity 1.5s ease, transform 1.5s ease;
   }
   .ui-galaxia.oculto-total { opacity: 0; transform: scale(1.1); pointer-events: none; }
@@ -528,7 +511,7 @@
   #btn-volver {
     padding: 12px 30px; font-size: 1rem; font-weight: 800; font-family: 'Montserrat', sans-serif;
     color: white; background: transparent;
-    border: 2px solid #00f2fe; border-radius: 30px; cursor: pointer;
+    border: 2px solid #00f2fe; border-radius: 30px; cursor: pointer; pointer-events: auto;
     box-shadow: 0 0 15px rgba(0, 242, 254, 0.3); transition: all 0.3s ease;
   }
   #btn-volver:hover { background: rgba(0, 242, 254, 0.2); box-shadow: 0 0 25px rgba(0, 242, 254, 0.6); transform: scale(1.05); }
