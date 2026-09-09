@@ -26,8 +26,8 @@
       <div class="meteorito meteoro-1"></div>
     </div>
 
-    <!-- Capa 4: Interfaz de Usuario (Foto, Texto Elegante y Botón) -->
-    <div class="ui-contenedor">
+    <!-- Capa 4: Interfaz de Textos (Foto y Letras) -->
+    <div class="ui-contenedor" id="ui-textos">
       <img src="/fondo-estrellas-wister/foto-annarella.jpg" alt="Annarella" id="foto-annarella" />
       
       <div class="mensaje-elegante" id="texto-cumple">
@@ -35,9 +35,10 @@
         <span class="cumple">CUMPLEAÑOS</span>
         <span class="nombre">ANNARELLA</span>
       </div>
-
-      <button id="btn-galaxia" class="oculto">PRESIONA AQUÍ</button>
     </div>
+
+    <!-- Capa 5: BOTÓN INDEPENDIENTE (Por encima de todo para asegurar el clic) -->
+    <button id="btn-galaxia" class="oculto">PRESIONA AQUÍ</button>
 
     <!-- Contenedor para hacer Scroll -->
     <main class="contenedor-scroll" id="zona-scroll">
@@ -48,7 +49,7 @@
 
     <script>
       // ==========================================
-      // MOTOR 3D: TIERRA Y NUEVA GALAXIA ESPIRAL
+      // MOTOR 3D: TIERRA Y VIAJE A LA GALAXIA
       // ==========================================
       
       // @ts-ignore
@@ -123,7 +124,7 @@
         scene.add(asteroid); 
 
         // ==========================================
-        // LA NUEVA GALAXIA ESPIRAL (Oculta al inicio)
+        // LA GALAXIA ESPIRAL 
         // ==========================================
         const parametrosGalaxia = { count: 15000, radius: 25, branches: 4 };
         const galaxiaGeo = new THREE.BufferGeometry();
@@ -136,7 +137,7 @@
         for(let i=0; i<parametrosGalaxia.count; i++) {
             const radio = Math.random() * parametrosGalaxia.radius;
             const anguloRama = (i % parametrosGalaxia.branches) * ((Math.PI * 2) / parametrosGalaxia.branches);
-            const giro = radio * 0.3; // Curvatura de la espiral
+            const giro = radio * 0.3; 
             
             const randomX = (Math.random() - 0.5) * 2;
             const randomY = (Math.random() - 0.5) * 1.5;
@@ -146,7 +147,6 @@
             positionsG[i*3+1] = randomY;
             positionsG[i*3+2] = Math.sin(anguloRama + giro) * radio + randomZ;
 
-            // Mezclar colores según la distancia al centro
             const mixedColor = colorRosa.clone().lerp(colorAzul, radio / parametrosGalaxia.radius);
             colorsG[i*3] = mixedColor.r;
             colorsG[i*3+1] = mixedColor.g;
@@ -163,11 +163,10 @@
             vertexColors: true
         });
         const galaxia = new THREE.Points(galaxiaGeo, galaxiaMat);
-        galaxia.visible = false; // Se oculta hasta hacer clic
-        galaxia.position.z = -20; // Lejos en el fondo
+        galaxia.visible = false; 
+        galaxia.position.z = -20; 
         scene.add(galaxia);
 
-        // --- RESPONSIVE 3D ---
         function actualizarLayout3D() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
@@ -187,14 +186,22 @@
         let tiempoAsteroide = 0;
         let modoGalaxia = false;
 
-        // --- EVENTO CLIC EN EL BOTÓN ---
+        // --- EVENTO CLIC CORREGIDO ---
         btnGalaxia.addEventListener('click', () => {
             modoGalaxia = true;
-            // Ocultar toda la interfaz web HTML
+            
+            // Ocultar toda la interfaz web HTML suavemente
             document.getElementById('zona-scroll')!.style.display = 'none';
-            document.querySelector('.ui-contenedor')!.classList.add('oculto-total');
-            document.getElementById('lluvia-meteoritos')!.style.display = 'none';
+            document.getElementById('ui-textos')!.style.opacity = '0';
+            
+            // Ocultar y desactivar el botón
+            btnGalaxia.style.opacity = '0';
+            btnGalaxia.style.pointerEvents = 'none';
+            
+            // Limpiar la pantalla para ver el espacio profundo
+            document.getElementById('lluvia-meteoritos')!.style.opacity = '0';
             document.getElementById('universo-fondo')!.style.opacity = '0';
+            document.getElementById('nebulosa')!.style.opacity = '0'; 
             
             // Revelar la galaxia 3D
             galaxia.visible = true;
@@ -204,7 +211,7 @@
           requestAnimationFrame(animate3D);
           
           if(!modoGalaxia) {
-              // Animación normal
+              // Animación normal de la Tierra
               earth.rotation.y += 0.001;       
               clouds.rotation.y += 0.0015; 
               moonPivot.rotation.y += 0.003;   
@@ -218,16 +225,18 @@
               asteroid.rotation.y += 0.01;
           } else {
               // ANIMACIÓN DEL VIAJE A LA GALAXIA
-              // La Tierra y asteroide se desvanecen/alejan
-              sistemaPlanetario.position.y -= 0.1;
-              asteroid.position.y -= 0.1;
+              // La Tierra y asteroide se hunden
+              sistemaPlanetario.position.y -= 0.15;
+              asteroid.position.y -= 0.15;
               
-              // La cámara viaja hacia el centro de la galaxia
-              if(camera.position.z > 5) camera.position.z -= 0.1;
+              // La cámara hace un efecto Zoom/Warp hacia adelante
+              if(camera.position.z > 2) {
+                  camera.position.z -= 0.1;
+              }
               
-              // La galaxia espiral gira majestuosamente
-              galaxia.rotation.y += 0.003;
-              galaxia.rotation.z += 0.001;
+              // La galaxia espiral gira de forma majestuosa
+              galaxia.rotation.y += 0.005;
+              galaxia.rotation.z += 0.002;
           }
 
           renderer.render(scene, camera);
@@ -236,14 +245,14 @@
       });
 
       // ==========================================
-      // CONTROLADOR DE SCROLL Y UI (SIN CANVAS TEXT)
+      // CONTROLADOR DE SCROLL Y UI 
       // ==========================================
       const canvasFondo = document.getElementById('universo-fondo') as HTMLCanvasElement;
       const ctxFondo = canvasFondo.getContext('2d') as CanvasRenderingContext2D;
       
       const foto = document.getElementById('foto-annarella') as HTMLImageElement;
       const textoCumple = document.getElementById('texto-cumple') as HTMLDivElement;
-      const btnGalaxia = document.getElementById('btn-galaxia') as HTMLButtonElement;
+      const btnGalaxia2 = document.getElementById('btn-galaxia') as HTMLButtonElement;
       const indicadorScroll = document.getElementById('indicador-scroll') as HTMLDivElement;
       
       let width: number, height: number;
@@ -271,12 +280,9 @@
         const scrollMaximo = document.body.scrollHeight - window.innerHeight;
         progresoScroll = Math.min(Math.max(window.scrollY / scrollMaximo, 0), 1);
         
-        // Desvanecer el indicador de "Baja para ver..."
         if(progresoScroll > 0.05) indicadorScroll.style.opacity = '0';
         else indicadorScroll.style.opacity = '0.7';
 
-        // Lógica de aparición de interfaz
-        // 1. La foto aparece primero
         if (progresoScroll > 0.2) {
            let progresoFoto = Math.min((progresoScroll - 0.2) * 2, 1);
            foto.style.opacity = progresoFoto.toString();
@@ -286,7 +292,6 @@
            foto.style.transform = `translate(-50%, 50px) scale(0.8)`;
         }
 
-        // 2. El texto aparece después
         if (progresoScroll > 0.5) {
            let progresoTexto = Math.min((progresoScroll - 0.5) * 2.5, 1);
            textoCumple.style.opacity = progresoTexto.toString();
@@ -296,11 +301,11 @@
            textoCumple.style.transform = `translate(-50%, 30px) scale(0.9)`;
         }
 
-        // 3. El botón aparece al final exacto del scroll
+        // Mostrar u ocultar el botón al final del scroll
         if (progresoScroll > 0.95) {
-            btnGalaxia.classList.remove('oculto');
+            btnGalaxia2.classList.remove('oculto');
         } else {
-            btnGalaxia.classList.add('oculto');
+            btnGalaxia2.classList.add('oculto');
         }
       });
 
@@ -341,29 +346,21 @@
   
   #universo-fondo { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; transition: opacity 2s ease; }
   #contenedor-3d { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
-  #lluvia-meteoritos { z-index: 3; pointer-events: none; }
+  #lluvia-meteoritos { z-index: 3; pointer-events: none; transition: opacity 2s ease; }
   
-  /* --- INTERFAZ ELEGANTE CSS --- */
+  /* --- INTERFAZ UI --- */
   .ui-contenedor {
     position: fixed;
     top: 0; left: 0;
     width: 100vw; height: 100vh;
     z-index: 10;
-    pointer-events: none; /* Deja que el scroll fluya */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    pointer-events: none; 
     transition: opacity 1.5s ease;
-  }
-
-  .ui-contenedor.oculto-total {
-      opacity: 0;
-      pointer-events: none;
   }
 
   #foto-annarella {
     position: absolute;
-    top: 15vh; /* Arriba para dejar espacio */
+    top: 15vh; 
     left: 50%;
     transform: translate(-50%, 50px);
     width: clamp(160px, 40vw, 300px);
@@ -376,10 +373,9 @@
     transition: transform 0.1s linear, opacity 0.1s linear;
   }
 
-  /* EL TEXTO: Nitidez absoluta y elegancia */
   .mensaje-elegante {
     position: absolute;
-    top: calc(15vh + clamp(160px, 40vw, 300px) + 30px); /* Justo debajo de la foto */
+    top: calc(15vh + clamp(160px, 40vw, 300px) + 30px); 
     left: 50%;
     transform: translate(-50%, 30px);
     text-align: center;
@@ -400,9 +396,9 @@
   .cumple { font-size: clamp(2.5rem, 10vw, 5rem); font-weight: 900; color: #fff; background: -webkit-linear-gradient(45deg, #ff69b4, #00f2fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .nombre { font-size: clamp(2rem, 8vw, 4rem); font-weight: 800; color: #fff; }
 
-  /* EL BOTÓN A LA GALAXIA */
+  /* --- BOTÓN ABSOLUTAMENTE CLICABLE --- */
   #btn-galaxia {
-    position: absolute;
+    position: fixed; /* Fixed para que ignore el scroll */
     bottom: 10vh;
     left: 50%;
     transform: translateX(-50%);
@@ -415,13 +411,14 @@
     border: none;
     border-radius: 30px;
     cursor: pointer;
-    pointer-events: auto; /* Para que se pueda hacer clic */
+    z-index: 50; /* Superior a TODO en la pantalla */
+    pointer-events: auto; /* Fuerza que reconozca el dedo/clic */
     box-shadow: 0 0 20px rgba(255, 20, 147, 0.5), 0 0 40px rgba(0, 242, 254, 0.5);
     transition: all 0.5s ease;
     animation: palpitar 2s infinite;
   }
 
-  #btn-galaxia:hover {
+  #btn-galaxia:hover, #btn-galaxia:active {
     transform: translateX(-50%) scale(1.1);
     box-shadow: 0 0 30px rgba(255, 20, 147, 0.8), 0 0 60px rgba(0, 242, 254, 0.8);
   }
@@ -438,12 +435,10 @@
     100% { box-shadow: 0 0 20px rgba(255, 20, 147, 0.5), 0 0 40px rgba(0, 242, 254, 0.5); }
   }
 
-  /* Área de Scroll más larga para disfrutar el efecto */
   .contenedor-scroll { position: relative; height: 350vh; z-index: 20; }
   
   .indicador { position: fixed; top: 5%; width: 100%; text-align: center; pointer-events: none; transition: opacity 0.5s; text-shadow: 0px 0px 10px rgba(255,255,255,0.5); }
 
-  /* Meteoritos CSS (Mantenidos) */
   .estrella-fugaz, .meteorito { position: fixed; border-radius: 50%; opacity: 0; }
   .estrella-fugaz { width: 3px; height: 3px; background: white; box-shadow: 0 0 10px white; }
   .estrella-fugaz::after { content: ''; position: absolute; top: 50%; transform: translateY(-50%); width: 150px; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.8), transparent); }
