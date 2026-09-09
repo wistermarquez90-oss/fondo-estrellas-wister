@@ -9,19 +9,26 @@
     <title>Feliz Cumpleaños Annarella</title>
   </head>
   <body>
-    <!-- Capa 0: Nebulosa y Planetas -->
+    <!-- Capa 0: Nebulosa -->
     <div class="nebulosa"></div>
-    <div class="planeta-gigante"></div>
-    <div class="luna-lejana"></div>
+    
+    <!-- Sistema Solar Animado -->
+    <div class="sistema-solar">
+      <div class="planeta-gigante"></div>
+      <div class="orbita-luna">
+        <div class="luna"></div>
+      </div>
+    </div>
     
     <!-- Capa 1: Lluvia de estrellas y meteoritos -->
     <div class="estrella-fugaz fugaz-1"></div>
     <div class="estrella-fugaz fugaz-2"></div>
     <div class="estrella-fugaz fugaz-3"></div>
-    <div class="meteorito"></div>
+    <div class="meteorito meteoro-1"></div>
+    <div class="meteorito meteoro-2"></div>
 
-    <!-- Capa 2: La foto de la cumpleañera (Oculta al inicio) -->
-    <img src="/foto-annarella.jpg" alt="Annarella" id="foto-annarella" />
+    <!-- Capa 2: La foto de la cumpleañera (Fíjate que ya no tiene la barra '/' al inicio) -->
+    <img src="foto-annarella.jpg" alt="Annarella" id="foto-annarella" />
 
     <!-- Capa 3: El lienzo de estrellas dinámicas -->
     <canvas id="universo"></canvas>
@@ -43,7 +50,6 @@
       let puntosTexto = [];
       let progresoScroll = 0;
 
-      // El texto ahora tiene un salto de línea (\n)
       const FRASE = "FELIZ CUMPLEAÑOS\nANNARELLA"; 
 
       function iniciar() {
@@ -60,16 +66,16 @@
         canvasTemp.height = height;
 
         ctxTemp.fillStyle = 'white';
-        // Letra un poco más pequeña para que quepa la frase larga
-        ctxTemp.font = '900 7vw sans-serif'; 
+        // Ajustamos la fuente para que sea súper legible pero no se salga de los bordes
+        let fontSize = width < 768 ? '10vw' : '7vw'; 
+        ctxTemp.font = `900 ${fontSize} "Arial Black", sans-serif`; 
         ctxTemp.textAlign = 'center';
         ctxTemp.textBaseline = 'middle';
         
-        // Separamos el texto en dos líneas
         const lineas = texto.split('\n');
-        // Colocamos el texto en el 75% de la pantalla (abajo) para dejar la foto en el centro
+        // Bajamos el texto un poco más para que la foto respire
         const startY = height * 0.75; 
-        const lineHeight = height * 0.10; // Espaciado entre líneas
+        const lineHeight = width < 768 ? height * 0.08 : height * 0.12; 
 
         lineas.forEach((linea, index) => {
           ctxTemp.fillText(linea, width / 2, startY + (index * lineHeight));
@@ -78,9 +84,9 @@
         const data = ctxTemp.getImageData(0, 0, width, height).data;
         puntosTexto = [];
         
-        // Escáner optimizado (salta de 10 en 10 píxeles)
-        for (let y = 0; y < height; y += 10) {
-          for (let x = 0; x < width; x += 10) {
+        // Saltamos de 6 en 6 píxeles. Esto dará mucha más definición a las letras.
+        for (let y = 0; y < height; y += 6) {
+          for (let x = 0; x < width; x += 6) {
             const alpha = data[(y * width + x) * 4 + 3];
             if (alpha > 128) {
               puntosTexto.push({ x, y });
@@ -93,7 +99,8 @@
         estrellasFondo = [];
         estrellasDinamicas = [];
 
-        for (let i = 0; i < 350; i++) {
+        // Fondo de estrellas
+        for (let i = 0; i < 300; i++) {
           estrellasFondo.push({
             x: Math.random() * width,
             y: Math.random() * height,
@@ -103,7 +110,8 @@
           });
         }
 
-        const numDinamicas = Math.max(puntosTexto.length, 400); 
+        // Estrellas dinámicas para formar la frase
+        const numDinamicas = Math.max(puntosTexto.length, 500); 
         for (let i = 0; i < numDinamicas; i++) {
           const destino = puntosTexto[i] || {
             x: Math.random() * width,
@@ -115,7 +123,7 @@
             yInicial: Math.random() * height,
             xDestino: destino.x,
             yDestino: destino.y,
-            tamanoBase: Math.random() * 1.5 + 0.8, 
+            tamanoBase: Math.random() * 1.2 + 0.6, 
             formaTexto: i < puntosTexto.length,
             faseBrillo: Math.random() * Math.PI * 2, 
             velocidadBrillo: Math.random() * 2 + 1 
@@ -136,10 +144,10 @@
 
         // Controlar la aparición de la foto
         if (progresoAcelerado > 0.4) {
-           // Transición matemática suave de 0 a 1
            let progresoFoto = Math.min((progresoAcelerado - 0.4) * 1.66, 1);
            foto.style.opacity = progresoFoto;
-           foto.style.transform = `translate(-50%, -50%) scale(${0.7 + (progresoFoto * 0.3)})`;
+           // Sube lentamente mientras aparece
+           foto.style.transform = `translate(-50%, -60%) scale(${0.7 + (progresoFoto * 0.3)})`;
         } else {
            foto.style.opacity = 0;
            foto.style.transform = `translate(-50%, -50%) scale(0.7)`;
@@ -161,12 +169,12 @@
           let tamanoActual = estrella.tamanoBase + (oscilacion * 0.3);
 
           if (estrella.formaTexto && progresoAcelerado > 0.6) {
-            ctx.fillStyle = `rgba(255, 105, 180, ${progresoAcelerado * 0.4})`; // Resplandor rosa espacial
+            ctx.fillStyle = `rgba(255, 105, 180, ${progresoAcelerado * 0.5})`; 
             ctx.beginPath();
-            ctx.arc(xActual, yActual, tamanoActual * 3.5, 0, Math.PI * 2);
+            ctx.arc(xActual, yActual, tamanoActual * 3, 0, Math.PI * 2);
             ctx.fill();
             
-            ctx.fillStyle = 'rgba(255, 255, 255, 1)'; // Centro blanco puro
+            ctx.fillStyle = 'rgba(255, 255, 255, 1)'; 
           } else {
             ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + (oscilacion * 0.4)})`;
           }
@@ -190,9 +198,10 @@
   body, html {
     margin: 0;
     padding: 0;
-    background-color: #020306; /* Espacio aún más profundo */
+    background-color: #020306; 
     color: white;
     font-family: sans-serif;
+    overflow-x: hidden;
   }
   
   .nebulosa {
@@ -208,44 +217,77 @@
     z-index: 0;
   }
 
-  /* --- NUEVOS ELEMENTOS ESPACIALES --- */
-  .planeta-gigante {
+  /* --- SISTEMA SOLAR ORBITANDO --- */
+  .sistema-solar {
     position: fixed;
-    top: -5%;
-    right: -5%;
-    width: 400px;
-    height: 400px;
-    border-radius: 50%;
-    /* Gradiente simulando un planeta gaseoso iluminado por un sol distante */
-    background: radial-gradient(circle at 30% 70%, #1a202c 0%, #000000 80%);
-    box-shadow: inset -20px -20px 50px rgba(100, 150, 255, 0.2), 0 0 60px rgba(100, 150, 255, 0.1);
-    z-index: 0;
-    opacity: 0.8;
+    top: 5%;
+    right: 5%;
+    width: clamp(150px, 20vw, 300px);
+    height: clamp(150px, 20vw, 300px);
+    z-index: 1;
   }
 
-  .luna-lejana {
-    position: fixed;
-    top: 60%;
-    left: 10%;
-    width: 60px;
-    height: 60px;
+  .planeta-gigante {
+    position: absolute;
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
-    background: radial-gradient(circle at 20% 20%, #718096 0%, #1a202c 90%);
-    box-shadow: inset -10px -10px 20px rgba(0,0,0,0.9);
-    z-index: 0;
+    /* Franjas diagonales para simular tormentas de gas en rotación */
+    background: repeating-linear-gradient(
+      45deg,
+      #1a202c,
+      #1a202c 20px,
+      #2d3748 20px,
+      #2d3748 40px
+    );
+    box-shadow: inset -30px -30px 50px rgba(0,0,0,0.9), 0 0 50px rgba(100, 150, 255, 0.2);
+    /* Gira sobre su propio eje */
+    animation: rotarPlaneta 40s linear infinite;
+  }
+
+  .orbita-luna {
+    position: absolute;
+    top: -20%;
+    left: -20%;
+    width: 140%;
+    height: 140%;
+    border-radius: 50%;
+    /* Gira alrededor del planeta */
+    animation: rotarOrbita 20s linear infinite;
+  }
+
+  .luna {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #718096;
+    box-shadow: inset -10px -10px 20px rgba(0,0,0,0.8);
+    transform: translateX(-50%); /* Centra la luna en su línea de órbita */
+  }
+
+  @keyframes rotarPlaneta {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes rotarOrbita {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   /* --- LA FOTO DE ANNARELLA --- */
   #foto-annarella {
     position: fixed;
-    top: 35%; /* Ligeramente arriba del centro para dejar espacio al texto */
+    top: 40%; 
     left: 50%;
     width: clamp(200px, 40vw, 350px);
     height: clamp(200px, 40vw, 350px);
     object-fit: cover;
     border-radius: 50%;
-    z-index: 2; /* Encima del fondo, debajo del texto */
-    /* Resplandor brillante de cumpleaños espacial */
+    z-index: 2; 
     box-shadow: 0 0 40px rgba(255, 105, 180, 0.5), 0 0 100px rgba(0, 242, 254, 0.3);
     border: 3px solid rgba(255, 255, 255, 0.8);
     pointer-events: none;
@@ -266,13 +308,13 @@
   .estrella-fugaz, .meteorito {
     position: fixed;
     border-radius: 50%;
-    z-index: 1;
+    z-index: 4; /* Ahora pasan por encima de todo */
     opacity: 0;
   }
   
   .estrella-fugaz {
-    width: 2px;
-    height: 2px;
+    width: 3px;
+    height: 3px;
     background: white;
     box-shadow: 0 0 10px white;
   }
@@ -281,14 +323,15 @@
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 100px; 
+    width: 150px; 
     height: 1px;
     background: linear-gradient(90deg, rgba(255,255,255,0.8), transparent);
   }
 
+  /* Meteoritos más grandes e imponentes */
   .meteorito {
-    width: 4px;
-    height: 4px;
+    width: 8px;
+    height: 8px;
     background: #ffdb58;
     box-shadow: 0 0 20px #ffdb58, 0 0 40px #ff8c00;
   }
@@ -297,21 +340,24 @@
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 250px; 
-    height: 3px;
+    width: 300px; 
+    height: 4px;
     background: linear-gradient(90deg, #ff8c00, #ff0000, transparent);
   }
 
-  /* Diferentes tiempos y posiciones */
-  .fugaz-1 { top: 20%; left: 80%; animation: animarFugaz 8s linear infinite; animation-delay: 2s; }
-  .fugaz-2 { top: 50%; left: 95%; animation: animarFugaz 12s linear infinite; animation-delay: 5s; }
-  .fugaz-3 { top: 80%; left: 70%; animation: animarFugaz 15s linear infinite; animation-delay: 9s; }
-  .meteorito { top: 10%; left: 110%; animation: animarFugaz 20s linear infinite; animation-delay: 12s; }
+  /* Distribución por la pantalla */
+  .fugaz-1 { top: 20%; left: 100%; animation: animarFugaz 7s linear infinite; animation-delay: 1s; }
+  .fugaz-2 { top: 60%; left: 110%; animation: animarFugaz 11s linear infinite; animation-delay: 4s; }
+  .fugaz-3 { top: 85%; left: 120%; animation: animarFugaz 14s linear infinite; animation-delay: 8s; }
+  
+  .meteoro-1 { top: 15%; left: 130%; animation: animarFugaz 15s linear infinite; animation-delay: 5s; }
+  .meteoro-2 { top: 70%; left: 150%; animation: animarFugaz 22s linear infinite; animation-delay: 12s; }
 
   @keyframes animarFugaz {
     0% { transform: translateX(0) translateY(0) rotate(-35deg); opacity: 1; }
-    5% { opacity: 0; }
-    100% { transform: translateX(-2000px) translateY(1400px) rotate(-35deg); opacity: 0; }
+    3% { opacity: 1; }
+    10% { opacity: 0; }
+    100% { transform: translateX(-2500px) translateY(1750px) rotate(-35deg); opacity: 0; }
   }
 
   .contenedor-scroll {
@@ -322,7 +368,7 @@
   
   .indicador {
     position: fixed;
-    top: 10%;
+    top: 5%;
     width: 100%;
     text-align: center;
     pointer-events: none;
