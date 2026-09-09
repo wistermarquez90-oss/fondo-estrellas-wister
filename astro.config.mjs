@@ -1,5 +1,9 @@
-// @ts-check
 import { defineConfig } from 'astro/config';
 
-// https://astro.build/config
-export default defineConfig({});
+export default defineConfig({
+  // Tu dirección web exacta en GitHub Pages
+  site: 'https://wistermarquez90-oss.github.io',
+  
+  // El nombre de la carpeta/repositorio
+  base: '/fondo-estrellas-wister', 
+});
