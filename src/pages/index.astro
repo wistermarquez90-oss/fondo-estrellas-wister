@@ -12,10 +12,10 @@
     <!-- Capa 0: Nebulosa oscura -->
     <div class="nebulosa"></div>
     
-    <!-- Capa 1: Estrellas estáticas del fondo (Siempre detrás de los planetas) -->
+    <!-- Capa 1: Estrellas estáticas del fondo -->
     <canvas id="universo-fondo"></canvas>
 
-    <!-- Capa 2: Motor 3D a pantalla completa (Planetas y Asteroide) -->
+    <!-- Capa 2: Motor 3D a pantalla completa -->
     <div id="contenedor-3d"></div>
     
     <!-- Capa 3: Meteoritos CSS -->
@@ -28,7 +28,7 @@
     <!-- Capa 4: Foto de Annarella -->
     <img src="/fondo-estrellas-wister/foto-annarella.jpg" alt="Annarella" id="foto-annarella" />
     
-    <!-- Capa 5: Estrellas dinámicas que forman la palabra (Siempre al frente) -->
+    <!-- Capa 5: Estrellas dinámicas que forman la palabra -->
     <canvas id="universo-frente"></canvas>
 
     <main class="contenedor-scroll">
@@ -41,13 +41,14 @@
       // ==========================================
       // MOTOR 3D: TIERRA HIPERREALISTA A PANTALLA COMPLETA
       // ==========================================
+      
+      // @ts-ignore - Le decimos a TypeScript que ignore este enlace externo
       import('https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js').then((THREE) => {
-        const contenedor3D = document.getElementById('contenedor-3d');
+        const contenedor3D = document.getElementById('contenedor-3d') as HTMLDivElement;
         
         const scene = new THREE.Scene();
-        // Cámara ajustada a la pantalla completa
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.z = 12; // Cámara más alejada para ver todo el entorno
+        camera.position.z = 12; 
         
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight); 
@@ -56,52 +57,46 @@
         renderer.domElement.style.height = '100%';
         contenedor3D.appendChild(renderer.domElement);
 
-        // Cargador de texturas (Usando repositorios oficiales sin bloqueo CORS)
         const textureLoader = new THREE.TextureLoader();
         const urlEarth = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg';
         const urlSpecular = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_specular_2048.jpg';
         const urlClouds = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png';
         const urlMoon = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg';
 
-        // --- ILUMINACIÓN REALISTA ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); // Luz de fondo tenue
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); 
         scene.add(ambientLight);
         
-        const sunLight = new THREE.DirectionalLight(0xffffff, 2.5); // El Sol pegando desde la izquierda
+        const sunLight = new THREE.DirectionalLight(0xffffff, 2.5); 
         sunLight.position.set(-10, 5, 5); 
         scene.add(sunLight);
         
-        const atmLight = new THREE.PointLight(0x4488ff, 1.5, 20); // Resplandor azulado atmosférico
+        const atmLight = new THREE.PointLight(0x4488ff, 1.5, 20); 
         atmLight.position.set(2, 0, 3);
         scene.add(atmLight);
 
-        // --- SISTEMA TIERRA-LUNA (Grupo para moverlos juntos) ---
         const sistemaPlanetario = new THREE.Group();
         scene.add(sistemaPlanetario);
 
-        // 1. La Tierra con reflejos oceánicos
         const earthGeo = new THREE.SphereGeometry(2.5, 64, 64); 
         const earthMat = new THREE.MeshPhongMaterial({ 
             map: textureLoader.load(urlEarth),
-            specularMap: textureLoader.load(urlSpecular), // Solo brilla el agua
+            specularMap: textureLoader.load(urlSpecular), 
             specular: new THREE.Color('grey'),
             shininess: 30
         });
         const earth = new THREE.Mesh(earthGeo, earthMat);
         sistemaPlanetario.add(earth);
 
-        // 2. Capa de nubes independiente que gira a otra velocidad
         const cloudGeo = new THREE.SphereGeometry(2.55, 64, 64);
         const cloudMat = new THREE.MeshLambertMaterial({
             map: textureLoader.load(urlClouds),
             transparent: true,
             opacity: 0.8,
-            blending: THREE.AdditiveBlending // Hace que las nubes se iluminen realísticamente
+            blending: THREE.AdditiveBlending 
         });
         const clouds = new THREE.Mesh(cloudGeo, cloudMat);
         sistemaPlanetario.add(clouds);
 
-        // 3. La Luna
         const moonPivot = new THREE.Group();
         sistemaPlanetario.add(moonPivot);
 
@@ -114,30 +109,27 @@
         moon.position.set(4.8, 0, 0); 
         moonPivot.add(moon);
 
-        // --- ASTEROIDE DEFORMADO HIPERREALISTA ---
-        const asteroidGeo = new THREE.DodecahedronGeometry(0.8, 3); // Nivel 3 de detalle = más polígonos
+        const asteroidGeo = new THREE.DodecahedronGeometry(0.8, 3); 
         const posiciones = asteroidGeo.attributes.position;
         for(let i = 0; i < posiciones.count; i++) {
-            const deformacion = 1 + (Math.random() * 0.4 - 0.2); // Rompe la esfera para hacerla una roca
+            const deformacion = 1 + (Math.random() * 0.4 - 0.2); 
             posiciones.setXYZ(i, posiciones.getX(i)*deformacion, posiciones.getY(i)*deformacion, posiciones.getZ(i)*deformacion);
         }
         asteroidGeo.computeVertexNormals(); 
 
         const asteroidMat = new THREE.MeshStandardMaterial({ 
-            map: textureLoader.load(urlMoon), // Usamos roca lunar
+            map: textureLoader.load(urlMoon),
             roughness: 0.8,
             color: 0xaaaaaa 
         });
         const asteroid = new THREE.Mesh(asteroidGeo, asteroidMat);
-        scene.add(asteroid); // El asteroide no pertenece al grupo del planeta, va libre
+        scene.add(asteroid); 
 
-        // --- ADAPTACIÓN RESPONSIVA DEL ENTORNO 3D ---
         function actualizarLayout3D() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
             
-            // Si es celular, ubicamos la Tierra arriba a la derecha y más pequeña
             if (window.innerWidth < 768) {
                 sistemaPlanetario.position.set(1.5, 4, -3);
                 sistemaPlanetario.scale.set(0.6, 0.6, 0.6);
@@ -147,7 +139,7 @@
             }
         }
         window.addEventListener('resize', actualizarLayout3D);
-        actualizarLayout3D(); // Ejecutar al inicio
+        actualizarLayout3D(); 
 
         let tiempoAsteroide = 0;
 
@@ -155,11 +147,10 @@
           requestAnimationFrame(animate3D);
           
           earth.rotation.y += 0.001;       
-          clouds.rotation.y += 0.0015; // Las nubes giran más rápido
+          clouds.rotation.y += 0.0015; 
           moonPivot.rotation.y += 0.003;   
           moon.rotation.y += 0.002;        
           
-          // Asteroide viajando por TODA la pantalla en órbitas amplias
           tiempoAsteroide += 0.005;
           asteroid.position.x = Math.cos(tiempoAsteroide * 0.8) * 8;
           asteroid.position.y = Math.sin(tiempoAsteroide * 1.5) * 6;
@@ -175,20 +166,24 @@
       });
 
       // ==========================================
-      // MOTOR 2D: DOS LIENZOS PARA SOLUCIONAR LAS CAPAS
+      // MOTOR 2D: SOLUCIÓN DE TIPOS DE TYPESCRIPT
       // ==========================================
-      const canvasFondo = document.getElementById('universo-fondo');
-      const ctxFondo = canvasFondo.getContext('2d');
-      const canvasFrente = document.getElementById('universo-frente');
-      const ctxFrente = canvasFrente.getContext('2d');
       
-      const foto = document.getElementById('foto-annarella');
+      // Añadimos 'as HTMLCanvasElement' para que TypeScript sepa qué elementos son
+      const canvasFondo = document.getElementById('universo-fondo') as HTMLCanvasElement;
+      const ctxFondo = canvasFondo.getContext('2d') as CanvasRenderingContext2D;
       
-      let width, height;
-      let estrellasFondo = []; 
-      let estrellasDinamicas = []; 
-      let puntosTexto = [];
-      let progresoScroll = 0;
+      const canvasFrente = document.getElementById('universo-frente') as HTMLCanvasElement;
+      const ctxFrente = canvasFrente.getContext('2d') as CanvasRenderingContext2D;
+      
+      const foto = document.getElementById('foto-annarella') as HTMLImageElement;
+      
+      // Definimos estrictamente los tipos de las variables
+      let width: number, height: number;
+      let estrellasFondo: any[] = []; 
+      let estrellasDinamicas: any[] = []; 
+      let puntosTexto: any[] = [];
+      let progresoScroll: number = 0;
 
       function iniciar2D() {
         width = window.innerWidth;
@@ -206,9 +201,10 @@
         crearEstrellas(esMovil);
       }
 
-      function obtenerCoordenadasTexto(texto, esMovil) {
+      // Parámetros tipados con string y boolean
+      function obtenerCoordenadasTexto(texto: string, esMovil: boolean) {
         const canvasTemp = document.createElement('canvas');
-        const ctxTemp = canvasTemp.getContext('2d');
+        const ctxTemp = canvasTemp.getContext('2d') as CanvasRenderingContext2D;
         canvasTemp.width = width;
         canvasTemp.height = height;
 
@@ -219,7 +215,6 @@
         ctxTemp.textBaseline = 'middle';
         
         const lineas = texto.split('\n');
-        // Bajamos el texto en móvil para que no choque con la foto
         const startY = esMovil ? height * 0.70 : height * 0.75; 
         const lineHeight = esMovil ? height * 0.08 : height * 0.12; 
 
@@ -241,7 +236,7 @@
         }
       }
 
-      function crearEstrellas(esMovil) {
+      function crearEstrellas(esMovil: boolean) {
         estrellasFondo = [];
         estrellasDinamicas = [];
 
@@ -291,16 +286,15 @@
 
         if (progresoAcelerado > 0.4) {
            let progresoFoto = Math.min((progresoAcelerado - 0.4) * 1.66, 1);
-           foto.style.opacity = progresoFoto;
-           // En celular sube mucho más para quedar justo encima del texto
+           // Convertimos el número a string (texto) para que CSS lo acepte sin errores
+           foto.style.opacity = progresoFoto.toString();
            let offsetAlto = width < 768 ? '-85%' : '-60%';
            foto.style.transform = `translate(-50%, ${offsetAlto}) scale(${0.7 + (progresoFoto * 0.3)})`;
         } else {
-           foto.style.opacity = 0;
+           foto.style.opacity = "0";
            foto.style.transform = `translate(-50%, -50%) scale(0.7)`;
         }
 
-        // Se dibuja en ctxFondo (Detrás del planeta y la foto)
         estrellasFondo.forEach(estrella => {
           let oscilacion = Math.sin(tiempo * estrella.velocidadBrillo + estrella.faseBrillo);
           ctxFondo.fillStyle = `rgba(255, 255, 255, ${0.3 + (oscilacion * 0.4)})`;
@@ -309,7 +303,6 @@
           ctxFondo.fill();
         });
 
-        // Se dibuja en ctxFrente (Por encima de TODO)
         estrellasDinamicas.forEach(estrella => {
           let xActual = estrella.xInicial + (estrella.xDestino - estrella.xInicial) * interpolacion;
           let yActual = estrella.yInicial + (estrella.yDestino - estrella.yInicial) * interpolacion;
@@ -365,7 +358,6 @@
     z-index: 0;
   }
 
-  /* ORDEN DE CAPAS PERFECTO (Z-INDEX) */
   #universo-fondo { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; }
   
   #contenedor-3d { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
@@ -376,7 +368,6 @@
   
   #universo-frente { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; pointer-events: none; }
 
-  /* Estilos de las estrellas fugaces */
   .estrella-fugaz { width: 3px; height: 3px; background: white; box-shadow: 0 0 10px white; }
   .estrella-fugaz::after { content: ''; position: absolute; top: 50%; transform: translateY(-50%); width: 150px; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.8), transparent); }
 
@@ -400,7 +391,6 @@
   
   .indicador { position: fixed; top: 5%; width: 100%; text-align: center; pointer-events: none; opacity: 0.7; text-shadow: 0px 0px 10px rgba(255,255,255,0.5); }
 
-  /* Media Queries Móviles Extras */
   @media (max-width: 768px) {
     .indicador h1 { font-size: 5vw; }
     #foto-annarella {
