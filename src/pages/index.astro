@@ -9,36 +9,55 @@
     <title>Feliz Cumpleaños Annarella</title>
   </head>
   <body>
-    <div class="nebulosa"></div>
+    <!-- Capa 0: Fondo oscuro -->
+    <div class="nebulosa" id="nebulosa"></div>
+    
+    <!-- Capa 1: Estrellas de fondo 2D -->
     <canvas id="universo-fondo"></canvas>
+
+    <!-- Capa 2: Motor 3D (Planetas y Galaxia) -->
     <div id="contenedor-3d"></div>
     
-    <div class="estrella-fugaz fugaz-1"></div>
-    <div class="estrella-fugaz fugaz-2"></div>
-    <div class="estrella-fugaz fugaz-3"></div>
-    <div class="meteorito meteoro-1"></div>
-    <div class="meteorito meteoro-2"></div>
+    <!-- Capa 3: Lluvia de Meteoritos -->
+    <div id="lluvia-meteoritos">
+      <div class="estrella-fugaz fugaz-1"></div>
+      <div class="estrella-fugaz fugaz-2"></div>
+      <div class="estrella-fugaz fugaz-3"></div>
+      <div class="meteorito meteoro-1"></div>
+    </div>
 
-    <img src="/fondo-estrellas-wister/foto-annarella.jpg" alt="Annarella" id="foto-annarella" />
-    <canvas id="universo-frente"></canvas>
+    <!-- Capa 4: Interfaz de Usuario (Foto, Texto Elegante y Botón) -->
+    <div class="ui-contenedor">
+      <img src="/fondo-estrellas-wister/foto-annarella.jpg" alt="Annarella" id="foto-annarella" />
+      
+      <div class="mensaje-elegante" id="texto-cumple">
+        <span class="feliz">FELIZ</span>
+        <span class="cumple">CUMPLEAÑOS</span>
+        <span class="nombre">ANNARELLA</span>
+      </div>
 
-    <main class="contenedor-scroll">
-      <div class="indicador">
+      <button id="btn-galaxia" class="oculto">PRESIONA AQUÍ</button>
+    </div>
+
+    <!-- Contenedor para hacer Scroll -->
+    <main class="contenedor-scroll" id="zona-scroll">
+      <div class="indicador" id="indicador-scroll">
         <h1>Baja para ver la sorpresa 👇</h1>
       </div>
     </main>
 
     <script>
       // ==========================================
-      // MOTOR 3D: TIERRA HIPERREALISTA A PANTALLA COMPLETA
+      // MOTOR 3D: TIERRA Y NUEVA GALAXIA ESPIRAL
       // ==========================================
       
       // @ts-ignore
       import('https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js').then((THREE) => {
         const contenedor3D = document.getElementById('contenedor-3d') as HTMLDivElement;
+        const btnGalaxia = document.getElementById('btn-galaxia') as HTMLButtonElement;
         
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.z = 12; 
         
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -56,15 +75,11 @@
 
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); 
         scene.add(ambientLight);
-        
         const sunLight = new THREE.DirectionalLight(0xffffff, 2.5); 
         sunLight.position.set(-10, 5, 5); 
         scene.add(sunLight);
-        
-        const atmLight = new THREE.PointLight(0x4488ff, 1.5, 20); 
-        atmLight.position.set(2, 0, 3);
-        scene.add(atmLight);
 
+        // --- SISTEMA TIERRA-LUNA ---
         const sistemaPlanetario = new THREE.Group();
         scene.add(sistemaPlanetario);
 
@@ -81,8 +96,7 @@
         const cloudGeo = new THREE.SphereGeometry(2.55, 64, 64);
         const cloudMat = new THREE.MeshLambertMaterial({
             map: textureLoader.load(urlClouds),
-            transparent: true,
-            opacity: 0.8,
+            transparent: true, opacity: 0.8,
             blending: THREE.AdditiveBlending 
         });
         const clouds = new THREE.Mesh(cloudGeo, cloudMat);
@@ -90,40 +104,78 @@
 
         const moonPivot = new THREE.Group();
         sistemaPlanetario.add(moonPivot);
-
         const moonGeo = new THREE.SphereGeometry(0.6, 64, 64);
-        const moonMat = new THREE.MeshStandardMaterial({ 
-            map: textureLoader.load(urlMoon), 
-            roughness: 0.9 
-        });
+        const moonMat = new THREE.MeshStandardMaterial({ map: textureLoader.load(urlMoon), roughness: 0.9 });
         const moon = new THREE.Mesh(moonGeo, moonMat);
         moon.position.set(4.8, 0, 0); 
         moonPivot.add(moon);
 
+        // --- EL ASTEROIDE ---
         const asteroidGeo = new THREE.DodecahedronGeometry(0.8, 3); 
         const posiciones = asteroidGeo.attributes.position;
         for(let i = 0; i < posiciones.count; i++) {
-            const deformacion = 1 + (Math.random() * 0.4 - 0.2); 
-            posiciones.setXYZ(i, posiciones.getX(i)*deformacion, posiciones.getY(i)*deformacion, posiciones.getZ(i)*deformacion);
+            const def = 1 + (Math.random() * 0.4 - 0.2); 
+            posiciones.setXYZ(i, posiciones.getX(i)*def, posiciones.getY(i)*def, posiciones.getZ(i)*def);
         }
         asteroidGeo.computeVertexNormals(); 
-
-        const asteroidMat = new THREE.MeshStandardMaterial({ 
-            map: textureLoader.load(urlMoon),
-            roughness: 0.8,
-            color: 0xaaaaaa 
-        });
+        const asteroidMat = new THREE.MeshStandardMaterial({ map: textureLoader.load(urlMoon), roughness: 0.8, color: 0xaaaaaa });
         const asteroid = new THREE.Mesh(asteroidGeo, asteroidMat);
         scene.add(asteroid); 
 
+        // ==========================================
+        // LA NUEVA GALAXIA ESPIRAL (Oculta al inicio)
+        // ==========================================
+        const parametrosGalaxia = { count: 15000, radius: 25, branches: 4 };
+        const galaxiaGeo = new THREE.BufferGeometry();
+        const positionsG = new Float32Array(parametrosGalaxia.count * 3);
+        const colorsG = new Float32Array(parametrosGalaxia.count * 3);
+        
+        const colorRosa = new THREE.Color(0xff1493);
+        const colorAzul = new THREE.Color(0x00f2fe);
+
+        for(let i=0; i<parametrosGalaxia.count; i++) {
+            const radio = Math.random() * parametrosGalaxia.radius;
+            const anguloRama = (i % parametrosGalaxia.branches) * ((Math.PI * 2) / parametrosGalaxia.branches);
+            const giro = radio * 0.3; // Curvatura de la espiral
+            
+            const randomX = (Math.random() - 0.5) * 2;
+            const randomY = (Math.random() - 0.5) * 1.5;
+            const randomZ = (Math.random() - 0.5) * 2;
+
+            positionsG[i*3] = Math.cos(anguloRama + giro) * radio + randomX;
+            positionsG[i*3+1] = randomY;
+            positionsG[i*3+2] = Math.sin(anguloRama + giro) * radio + randomZ;
+
+            // Mezclar colores según la distancia al centro
+            const mixedColor = colorRosa.clone().lerp(colorAzul, radio / parametrosGalaxia.radius);
+            colorsG[i*3] = mixedColor.r;
+            colorsG[i*3+1] = mixedColor.g;
+            colorsG[i*3+2] = mixedColor.b;
+        }
+        galaxiaGeo.setAttribute('position', new THREE.BufferAttribute(positionsG, 3));
+        galaxiaGeo.setAttribute('color', new THREE.BufferAttribute(colorsG, 3));
+        
+        const galaxiaMat = new THREE.PointsMaterial({
+            size: 0.15,
+            sizeAttenuation: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            vertexColors: true
+        });
+        const galaxia = new THREE.Points(galaxiaGeo, galaxiaMat);
+        galaxia.visible = false; // Se oculta hasta hacer clic
+        galaxia.position.z = -20; // Lejos en el fondo
+        scene.add(galaxia);
+
+        // --- RESPONSIVE 3D ---
         function actualizarLayout3D() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
             
             if (window.innerWidth < 768) {
-                sistemaPlanetario.position.set(1.5, 4, -3);
-                sistemaPlanetario.scale.set(0.6, 0.6, 0.6);
+                sistemaPlanetario.position.set(1.2, 4.5, -4);
+                sistemaPlanetario.scale.set(0.5, 0.5, 0.5);
             } else {
                 sistemaPlanetario.position.set(4, 3, -2);
                 sistemaPlanetario.scale.set(1, 1, 1);
@@ -133,23 +185,50 @@
         actualizarLayout3D(); 
 
         let tiempoAsteroide = 0;
+        let modoGalaxia = false;
+
+        // --- EVENTO CLIC EN EL BOTÓN ---
+        btnGalaxia.addEventListener('click', () => {
+            modoGalaxia = true;
+            // Ocultar toda la interfaz web HTML
+            document.getElementById('zona-scroll')!.style.display = 'none';
+            document.querySelector('.ui-contenedor')!.classList.add('oculto-total');
+            document.getElementById('lluvia-meteoritos')!.style.display = 'none';
+            document.getElementById('universo-fondo')!.style.opacity = '0';
+            
+            // Revelar la galaxia 3D
+            galaxia.visible = true;
+        });
 
         function animate3D() {
           requestAnimationFrame(animate3D);
           
-          earth.rotation.y += 0.001;       
-          clouds.rotation.y += 0.0015; 
-          moonPivot.rotation.y += 0.003;   
-          moon.rotation.y += 0.002;        
-          
-          tiempoAsteroide += 0.005;
-          asteroid.position.x = Math.cos(tiempoAsteroide * 0.8) * 8;
-          asteroid.position.y = Math.sin(tiempoAsteroide * 1.5) * 6;
-          asteroid.position.z = Math.sin(tiempoAsteroide * 1.2) * 5; 
-          
-          asteroid.rotation.x += 0.02;
-          asteroid.rotation.y += 0.01;
-          asteroid.rotation.z += 0.03;
+          if(!modoGalaxia) {
+              // Animación normal
+              earth.rotation.y += 0.001;       
+              clouds.rotation.y += 0.0015; 
+              moonPivot.rotation.y += 0.003;   
+              moon.rotation.y += 0.002;        
+              
+              tiempoAsteroide += 0.005;
+              asteroid.position.x = Math.cos(tiempoAsteroide * 0.8) * 8;
+              asteroid.position.y = Math.sin(tiempoAsteroide * 1.5) * 6;
+              asteroid.position.z = Math.sin(tiempoAsteroide * 1.2) * 5; 
+              asteroid.rotation.x += 0.02;
+              asteroid.rotation.y += 0.01;
+          } else {
+              // ANIMACIÓN DEL VIAJE A LA GALAXIA
+              // La Tierra y asteroide se desvanecen/alejan
+              sistemaPlanetario.position.y -= 0.1;
+              asteroid.position.y -= 0.1;
+              
+              // La cámara viaja hacia el centro de la galaxia
+              if(camera.position.z > 5) camera.position.z -= 0.1;
+              
+              // La galaxia espiral gira majestuosamente
+              galaxia.rotation.y += 0.003;
+              galaxia.rotation.z += 0.001;
+          }
 
           renderer.render(scene, camera);
         }
@@ -157,81 +236,26 @@
       });
 
       // ==========================================
-      // MOTOR 2D: SOLUCIÓN DE RESOLUCIÓN DE TEXTO PARA MÓVILES
+      // CONTROLADOR DE SCROLL Y UI (SIN CANVAS TEXT)
       // ==========================================
-      
       const canvasFondo = document.getElementById('universo-fondo') as HTMLCanvasElement;
       const ctxFondo = canvasFondo.getContext('2d') as CanvasRenderingContext2D;
       
-      const canvasFrente = document.getElementById('universo-frente') as HTMLCanvasElement;
-      const ctxFrente = canvasFrente.getContext('2d') as CanvasRenderingContext2D;
-      
       const foto = document.getElementById('foto-annarella') as HTMLImageElement;
+      const textoCumple = document.getElementById('texto-cumple') as HTMLDivElement;
+      const btnGalaxia = document.getElementById('btn-galaxia') as HTMLButtonElement;
+      const indicadorScroll = document.getElementById('indicador-scroll') as HTMLDivElement;
       
       let width: number, height: number;
       let estrellasFondo: any[] = []; 
-      let estrellasDinamicas: any[] = []; 
-      let puntosTexto: any[] = [];
       let progresoScroll: number = 0;
-      let esMovilGlobal: boolean = false;
 
-      function iniciar2D() {
-        width = window.innerWidth;
-        height = window.innerHeight;
+      function iniciarFondo() {
+        width = canvasFondo.width = window.innerWidth;
+        height = canvasFondo.height = window.innerHeight;
         
-        canvasFondo.width = width;
-        canvasFondo.height = height;
-        canvasFrente.width = width;
-        canvasFrente.height = height;
-        
-        esMovilGlobal = width < 768;
-        const textoMostrar = esMovilGlobal ? "FELIZ\nCUMPLEAÑOS\nANNARELLA" : "FELIZ CUMPLEAÑOS\nANNARELLA";
-        
-        obtenerCoordenadasTexto(textoMostrar, esMovilGlobal);
-        crearEstrellas(esMovilGlobal);
-      }
-
-      function obtenerCoordenadasTexto(texto: string, esMovil: boolean) {
-        const canvasTemp = document.createElement('canvas');
-        const ctxTemp = canvasTemp.getContext('2d') as CanvasRenderingContext2D;
-        canvasTemp.width = width;
-        canvasTemp.height = height;
-
-        ctxTemp.fillStyle = 'white';
-        // Letra un poco más pequeña en móvil para que no se desborde (9vw en lugar de 12vw)
-        let fontSize = esMovil ? '9vw' : '7vw'; 
-        ctxTemp.font = `900 ${fontSize} "Arial Black", sans-serif`; 
-        ctxTemp.textAlign = 'center';
-        ctxTemp.textBaseline = 'middle';
-        
-        const lineas = texto.split('\n');
-        const startY = esMovil ? height * 0.70 : height * 0.75; 
-        const lineHeight = esMovil ? height * 0.08 : height * 0.12; 
-
-        lineas.forEach((linea, index) => {
-          ctxTemp.fillText(linea, width / 2, startY + (index * lineHeight));
-        });
-
-        const data = ctxTemp.getImageData(0, 0, width, height).data;
-        puntosTexto = [];
-        
-        // CORRECCIÓN CRÍTICA: Escaneamos cada 4 píxeles en móvil para altísima definición
-        const saltoPixels = esMovil ? 4 : 6; 
-        for (let y = 0; y < height; y += saltoPixels) {
-          for (let x = 0; x < width; x += saltoPixels) {
-            const alpha = data[(y * width + x) * 4 + 3];
-            if (alpha > 128) {
-              puntosTexto.push({ x, y });
-            }
-          }
-        }
-      }
-
-      function crearEstrellas(esMovil: boolean) {
         estrellasFondo = [];
-        estrellasDinamicas = [];
-
-        const cantidadFondo = esMovil ? 200 : 350;
+        const cantidadFondo = width < 768 ? 200 : 400;
         for (let i = 0; i < cantidadFondo; i++) {
           estrellasFondo.push({
             x: Math.random() * width,
@@ -241,50 +265,48 @@
             velocidadBrillo: Math.random() * 0.5 + 0.2 
           });
         }
-
-        const numDinamicas = Math.max(puntosTexto.length, esMovil ? 400 : 500); 
-        for (let i = 0; i < numDinamicas; i++) {
-          const destino = puntosTexto[i] || {
-            x: Math.random() * width,
-            y: Math.random() * height
-          };
-
-          estrellasDinamicas.push({
-            xInicial: Math.random() * width,
-            yInicial: Math.random() * height,
-            xDestino: destino.x,
-            yDestino: destino.y,
-            // Estrellas más pequeñas en móvil para que las letras se vean nítidas
-            tamanoBase: Math.random() * (esMovil ? 0.7 : 1.2) + (esMovil ? 0.4 : 0.6), 
-            formaTexto: i < puntosTexto.length,
-            faseBrillo: Math.random() * Math.PI * 2, 
-            velocidadBrillo: Math.random() * 2 + 1 
-          });
-        }
       }
 
       window.addEventListener('scroll', () => {
         const scrollMaximo = document.body.scrollHeight - window.innerHeight;
         progresoScroll = Math.min(Math.max(window.scrollY / scrollMaximo, 0), 1);
-      });
-
-      function animar2D() {
-        ctxFondo.clearRect(0, 0, width, height);
-        ctxFrente.clearRect(0, 0, width, height);
         
-        const tiempo = Date.now() * 0.001; 
-        let progresoAcelerado = Math.min(progresoScroll * 2, 1);
-        let interpolacion = 1 - Math.pow(1 - progresoAcelerado, 3);
+        // Desvanecer el indicador de "Baja para ver..."
+        if(progresoScroll > 0.05) indicadorScroll.style.opacity = '0';
+        else indicadorScroll.style.opacity = '0.7';
 
-        if (progresoAcelerado > 0.4) {
-           let progresoFoto = Math.min((progresoAcelerado - 0.4) * 1.66, 1);
+        // Lógica de aparición de interfaz
+        // 1. La foto aparece primero
+        if (progresoScroll > 0.2) {
+           let progresoFoto = Math.min((progresoScroll - 0.2) * 2, 1);
            foto.style.opacity = progresoFoto.toString();
-           let offsetAlto = width < 768 ? '-85%' : '-60%';
-           foto.style.transform = `translate(-50%, ${offsetAlto}) scale(${0.7 + (progresoFoto * 0.3)})`;
+           foto.style.transform = `translate(-50%, 0) scale(${0.8 + (progresoFoto * 0.2)})`;
         } else {
            foto.style.opacity = "0";
-           foto.style.transform = `translate(-50%, -50%) scale(0.7)`;
+           foto.style.transform = `translate(-50%, 50px) scale(0.8)`;
         }
+
+        // 2. El texto aparece después
+        if (progresoScroll > 0.5) {
+           let progresoTexto = Math.min((progresoScroll - 0.5) * 2.5, 1);
+           textoCumple.style.opacity = progresoTexto.toString();
+           textoCumple.style.transform = `translate(-50%, 0) scale(${0.9 + (progresoTexto * 0.1)})`;
+        } else {
+           textoCumple.style.opacity = "0";
+           textoCumple.style.transform = `translate(-50%, 30px) scale(0.9)`;
+        }
+
+        // 3. El botón aparece al final exacto del scroll
+        if (progresoScroll > 0.95) {
+            btnGalaxia.classList.remove('oculto');
+        } else {
+            btnGalaxia.classList.add('oculto');
+        }
+      });
+
+      function animarFondo() {
+        ctxFondo.clearRect(0, 0, width, height);
+        const tiempo = Date.now() * 0.001; 
 
         estrellasFondo.forEach(estrella => {
           let oscilacion = Math.sin(tiempo * estrella.velocidadBrillo + estrella.faseBrillo);
@@ -293,77 +315,138 @@
           ctxFondo.arc(estrella.x, estrella.y, estrella.tamano, 0, Math.PI * 2);
           ctxFondo.fill();
         });
-
-        estrellasDinamicas.forEach(estrella => {
-          let xActual = estrella.xInicial + (estrella.xDestino - estrella.xInicial) * interpolacion;
-          let yActual = estrella.yInicial + (estrella.yDestino - estrella.yInicial) * interpolacion;
-          
-          let oscilacion = Math.sin(tiempo * estrella.velocidadBrillo + estrella.faseBrillo);
-          let tamanoActual = estrella.tamanoBase + (oscilacion * 0.3);
-
-          if (estrella.formaTexto && progresoAcelerado > 0.6) {
-            ctxFrente.fillStyle = `rgba(255, 105, 180, ${progresoAcelerado * 0.5})`; 
-            ctxFrente.beginPath();
-            // Resplandor más sutil en móviles para no manchar las letras
-            let multiplicadorResplandor = esMovilGlobal ? 2 : 3;
-            ctxFrente.arc(xActual, yActual, tamanoActual * multiplicadorResplandor, 0, Math.PI * 2);
-            ctxFrente.fill();
-            ctxFrente.fillStyle = 'rgba(255, 255, 255, 1)'; 
-          } else {
-            ctxFrente.fillStyle = `rgba(255, 255, 255, ${0.5 + (oscilacion * 0.4)})`;
-          }
-
-          ctxFrente.beginPath();
-          ctxFrente.arc(xActual, yActual, tamanoActual, 0, Math.PI * 2);
-          ctxFrente.fill();
-        });
-
-        requestAnimationFrame(animar2D);
+        requestAnimationFrame(animarFondo);
       }
 
-      window.addEventListener('resize', iniciar2D);
-      iniciar2D();
-      animar2D();
+      window.addEventListener('resize', iniciarFondo);
+      iniciarFondo();
+      animarFondo();
     </script>
   </body>
 </html>
 
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap');
+
   body, html {
     margin: 0;
     padding: 0;
     background-color: #020306; 
     color: white;
-    font-family: sans-serif;
+    font-family: 'Montserrat', sans-serif;
     overflow-x: hidden;
   }
   
-  .nebulosa {
+  .nebulosa { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 20% 30%, rgba(55, 20, 80, 0.4) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(20, 60, 100, 0.3) 0%, transparent 50%), radial-gradient(circle at 50% 100%, rgba(100, 20, 60, 0.25) 0%, transparent 60%); z-index: 0; transition: opacity 2s ease; }
+  
+  #universo-fondo { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; transition: opacity 2s ease; }
+  #contenedor-3d { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
+  #lluvia-meteoritos { z-index: 3; pointer-events: none; }
+  
+  /* --- INTERFAZ ELEGANTE CSS --- */
+  .ui-contenedor {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: 
-      radial-gradient(circle at 20% 30%, rgba(55, 20, 80, 0.4) 0%, transparent 50%),
-      radial-gradient(circle at 80% 70%, rgba(20, 60, 100, 0.3) 0%, transparent 50%),
-      radial-gradient(circle at 50% 100%, rgba(100, 20, 60, 0.25) 0%, transparent 60%);
-    z-index: 0;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 10;
+    pointer-events: none; /* Deja que el scroll fluya */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: opacity 1.5s ease;
   }
 
-  #universo-fondo { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; }
-  
-  #contenedor-3d { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
-  
-  .estrella-fugaz, .meteorito { position: fixed; border-radius: 50%; z-index: 3; opacity: 0; pointer-events: none; }
-  
-  #foto-annarella { position: fixed; top: 40%; left: 50%; width: clamp(200px, 40vw, 350px); height: clamp(200px, 40vw, 350px); object-fit: cover; border-radius: 50%; z-index: 4; box-shadow: 0 0 40px rgba(255, 105, 180, 0.5), 0 0 100px rgba(0, 242, 254, 0.3); border: 3px solid rgba(255, 255, 255, 0.8); pointer-events: none; opacity: 0; }
-  
-  #universo-frente { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; pointer-events: none; }
+  .ui-contenedor.oculto-total {
+      opacity: 0;
+      pointer-events: none;
+  }
 
+  #foto-annarella {
+    position: absolute;
+    top: 15vh; /* Arriba para dejar espacio */
+    left: 50%;
+    transform: translate(-50%, 50px);
+    width: clamp(160px, 40vw, 300px);
+    height: clamp(160px, 40vw, 300px);
+    object-fit: cover;
+    border-radius: 50%;
+    box-shadow: 0 0 40px rgba(255, 105, 180, 0.6), 0 0 80px rgba(0, 242, 254, 0.4);
+    border: 4px solid rgba(255, 255, 255, 0.9);
+    opacity: 0;
+    transition: transform 0.1s linear, opacity 0.1s linear;
+  }
+
+  /* EL TEXTO: Nitidez absoluta y elegancia */
+  .mensaje-elegante {
+    position: absolute;
+    top: calc(15vh + clamp(160px, 40vw, 300px) + 30px); /* Justo debajo de la foto */
+    left: 50%;
+    transform: translate(-50%, 30px);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    opacity: 0;
+    transition: transform 0.1s linear, opacity 0.1s linear;
+  }
+
+  .mensaje-elegante span {
+    line-height: 1;
+    letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(255, 105, 180, 0.8), 0 0 40px rgba(0, 242, 254, 0.6);
+  }
+
+  .feliz { font-size: clamp(2rem, 8vw, 4rem); font-weight: 800; color: #fff; }
+  .cumple { font-size: clamp(2.5rem, 10vw, 5rem); font-weight: 900; color: #fff; background: -webkit-linear-gradient(45deg, #ff69b4, #00f2fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .nombre { font-size: clamp(2rem, 8vw, 4rem); font-weight: 800; color: #fff; }
+
+  /* EL BOTÓN A LA GALAXIA */
+  #btn-galaxia {
+    position: absolute;
+    bottom: 10vh;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    font-weight: 800;
+    font-family: 'Montserrat', sans-serif;
+    color: white;
+    background: linear-gradient(45deg, #ff1493, #00f2fe);
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    pointer-events: auto; /* Para que se pueda hacer clic */
+    box-shadow: 0 0 20px rgba(255, 20, 147, 0.5), 0 0 40px rgba(0, 242, 254, 0.5);
+    transition: all 0.5s ease;
+    animation: palpitar 2s infinite;
+  }
+
+  #btn-galaxia:hover {
+    transform: translateX(-50%) scale(1.1);
+    box-shadow: 0 0 30px rgba(255, 20, 147, 0.8), 0 0 60px rgba(0, 242, 254, 0.8);
+  }
+
+  #btn-galaxia.oculto {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(20px);
+  }
+
+  @keyframes palpitar {
+    0% { box-shadow: 0 0 20px rgba(255, 20, 147, 0.5), 0 0 40px rgba(0, 242, 254, 0.5); }
+    50% { box-shadow: 0 0 40px rgba(255, 20, 147, 0.8), 0 0 80px rgba(0, 242, 254, 0.8); }
+    100% { box-shadow: 0 0 20px rgba(255, 20, 147, 0.5), 0 0 40px rgba(0, 242, 254, 0.5); }
+  }
+
+  /* Área de Scroll más larga para disfrutar el efecto */
+  .contenedor-scroll { position: relative; height: 350vh; z-index: 20; }
+  
+  .indicador { position: fixed; top: 5%; width: 100%; text-align: center; pointer-events: none; transition: opacity 0.5s; text-shadow: 0px 0px 10px rgba(255,255,255,0.5); }
+
+  /* Meteoritos CSS (Mantenidos) */
+  .estrella-fugaz, .meteorito { position: fixed; border-radius: 50%; opacity: 0; }
   .estrella-fugaz { width: 3px; height: 3px; background: white; box-shadow: 0 0 10px white; }
   .estrella-fugaz::after { content: ''; position: absolute; top: 50%; transform: translateY(-50%); width: 150px; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.8), transparent); }
-
   .meteorito { width: 8px; height: 8px; background: #ffdb58; box-shadow: 0 0 20px #ffdb58, 0 0 40px #ff8c00; }
   .meteorito::after { content: ''; position: absolute; top: 50%; transform: translateY(-50%); width: 300px; height: 4px; background: linear-gradient(90deg, #ff8c00, #ff0000, transparent); }
 
@@ -371,7 +454,6 @@
   .fugaz-2 { top: 60%; left: 110%; animation: animarFugaz 11s linear infinite; animation-delay: 4s; }
   .fugaz-3 { top: 85%; left: 120%; animation: animarFugaz 14s linear infinite; animation-delay: 8s; }
   .meteoro-1 { top: 15%; left: 130%; animation: animarFugaz 15s linear infinite; animation-delay: 5s; }
-  .meteoro-2 { top: 70%; left: 150%; animation: animarFugaz 22s linear infinite; animation-delay: 12s; }
 
   @keyframes animarFugaz {
     0% { transform: translateX(0) translateY(0) rotate(-35deg); opacity: 1; }
@@ -380,16 +462,7 @@
     100% { transform: translateX(-2500px) translateY(1750px) rotate(-35deg); opacity: 0; }
   }
 
-  .contenedor-scroll { position: relative; height: 300vh; z-index: 10; }
-  
-  .indicador { position: fixed; top: 5%; width: 100%; text-align: center; pointer-events: none; opacity: 0.7; text-shadow: 0px 0px 10px rgba(255,255,255,0.5); }
-
   @media (max-width: 768px) {
     .indicador h1 { font-size: 5vw; }
-    #foto-annarella {
-      width: clamp(140px, 45vw, 220px);
-      height: clamp(140px, 45vw, 220px);
-      top: 35%;
-    }
   }
 </style>
