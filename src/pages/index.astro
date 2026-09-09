@@ -9,10 +9,16 @@
     <title>Feliz Cumpleaños Annarella</title>
   </head>
   <body>
+    <!-- Capa 0: Fondo oscuro -->
     <div class="nebulosa" id="nebulosa"></div>
+    
+    <!-- Capa 1: Estrellas de fondo 2D -->
     <canvas id="universo-fondo"></canvas>
+
+    <!-- Capa 2: Motor 3D (Planetas y Galaxia) -->
     <div id="contenedor-3d"></div>
     
+    <!-- Capa 3: Lluvia de Meteoritos -->
     <div id="lluvia-meteoritos">
       <div class="estrella-fugaz fugaz-1"></div>
       <div class="estrella-fugaz fugaz-2"></div>
@@ -20,6 +26,7 @@
       <div class="meteorito meteoro-1"></div>
     </div>
 
+    <!-- Capa 4: Interfaz de Cumpleaños -->
     <div class="ui-contenedor" id="ui-textos">
       <img src="/fondo-estrellas-wister/foto-annarella.jpg" alt="Annarella" id="foto-annarella" />
       
@@ -32,6 +39,14 @@
 
     <button id="btn-galaxia" class="oculto">PRESIONA AQUÍ</button>
 
+    <!-- Capa 5: Interfaz de la Galaxia (Oculta al inicio) -->
+    <div class="ui-galaxia oculto-total" id="ui-galaxia">
+      <p class="mensaje-romantico">
+        "El amor que siento por ti, no cabe ni en toda una galaxia, esta galaxia te la hago para expresar un pequeño porcentaje de mi amor por ti."
+      </p>
+      <button id="btn-volver">VOLVER AL PLANETA</button>
+    </div>
+
     <main class="contenedor-scroll" id="zona-scroll">
       <div class="indicador" id="indicador-scroll">
         <h1>Baja para ver la sorpresa 👇</h1>
@@ -40,17 +55,15 @@
 
     <script>
       // ==========================================
-      // MOTOR 3D Y SHADERS: GALAXIA HIPERREALISTA
+      // MOTOR 3D: SHADERS, NÚCLEO LUMINOSO Y CÁMARA
       // ==========================================
       
       // @ts-ignore
       import('https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js').then((THREE) => {
         const contenedor3D = document.getElementById('contenedor-3d') as HTMLDivElement;
-        const btnGalaxia = document.getElementById('btn-galaxia') as HTMLButtonElement;
         
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 12; 
         
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight); 
@@ -71,26 +84,17 @@
         sunLight.position.set(-10, 5, 5); 
         scene.add(sunLight);
 
-        // --- SISTEMA TIERRA-LUNA ---
+        // --- SISTEMA PLANETARIO ---
         const sistemaPlanetario = new THREE.Group();
         scene.add(sistemaPlanetario);
 
         const earthGeo = new THREE.SphereGeometry(2.5, 64, 64); 
-        const earthMat = new THREE.MeshPhongMaterial({ 
-            map: textureLoader.load(urlEarth),
-            specularMap: textureLoader.load(urlSpecular), 
-            specular: new THREE.Color('grey'),
-            shininess: 30
-        });
+        const earthMat = new THREE.MeshPhongMaterial({ map: textureLoader.load(urlEarth), specularMap: textureLoader.load(urlSpecular), specular: new THREE.Color('grey'), shininess: 30 });
         const earth = new THREE.Mesh(earthGeo, earthMat);
         sistemaPlanetario.add(earth);
 
         const cloudGeo = new THREE.SphereGeometry(2.55, 64, 64);
-        const cloudMat = new THREE.MeshLambertMaterial({
-            map: textureLoader.load(urlClouds),
-            transparent: true, opacity: 0.8,
-            blending: THREE.AdditiveBlending 
-        });
+        const cloudMat = new THREE.MeshLambertMaterial({ map: textureLoader.load(urlClouds), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending });
         const clouds = new THREE.Mesh(cloudGeo, cloudMat);
         sistemaPlanetario.add(clouds);
 
@@ -114,70 +118,48 @@
         scene.add(asteroid); 
 
         // ==========================================
-        // GALAXIA REALISTA CON POLVO Y LATIDO DE LUZ
+        // GALAXIA SUPER REALISTA (SHADERS)
         // ==========================================
-        
-        // 1. GENERADOR DE TEXTURAS (Para evitar imágenes cuadradas)
-        function crearTextura(tipo: string) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 64; canvas.height = 64;
-            const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-            const gradiente = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-            
-            if (tipo === 'estrella') {
-                gradiente.addColorStop(0, 'rgba(255, 255, 255, 1)');
-                gradiente.addColorStop(0.2, 'rgba(255, 255, 255, 0.8)');
-                gradiente.addColorStop(0.4, 'rgba(255, 255, 255, 0.2)');
-                gradiente.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            } else { // Polvo
-                gradiente.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
-                gradiente.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
-                gradiente.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            }
-            ctx.fillStyle = gradiente;
-            ctx.fillRect(0, 0, 64, 64);
-            return new THREE.CanvasTexture(canvas);
-        }
-        
-        const texEstrella = crearTextura('estrella');
-        const texPolvo = crearTextura('polvo');
-
         const galaxiaGroup = new THREE.Group();
         scene.add(galaxiaGroup);
         galaxiaGroup.visible = false; 
-        galaxiaGroup.position.z = -20; 
-        galaxiaGroup.rotation.x = 0.5; // Inclinación épica
+        galaxiaGroup.position.z = -15; 
+        galaxiaGroup.rotation.x = 0.6; // Inclinación
         
-        // 2. SHADER MATERIAL (Para que las estrellas parpadeen vivas)
-        const starUniforms = {
-            uTime: { value: 0 },
-            uTexture: { value: texEstrella }
-        };
-
+        // Shader para Estrellas Perfectas (No más cuadrados)
+        const starUniforms = { uTime: { value: 0 } };
         const materialEstrellas = new THREE.ShaderMaterial({
             uniforms: starUniforms,
             vertexShader: `
                 attribute float size;
                 attribute float phase;
                 varying vec3 vColor;
+                varying float vAlpha;
                 uniform float uTime;
                 void main() {
                     vColor = color;
-                    // Latido matemático (Oscila entre 0 y 1)
-                    float twinkle = (sin(uTime * 1.5 + phase) + 1.0) * 0.5;
-                    float currentSize = size * (0.3 + twinkle * 1.5); 
+                    // Latido estelar
+                    float twinkle = (sin(uTime * 2.0 + phase) + 1.0) * 0.5;
+                    vAlpha = 0.4 + (twinkle * 0.6); 
                     
                     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                    gl_PointSize = currentSize * (30.0 / -mvPosition.z);
+                    gl_PointSize = size * (40.0 / -mvPosition.z);
                     gl_Position = projectionMatrix * mvPosition;
                 }
             `,
             fragmentShader: `
-                uniform sampler2D uTexture;
                 varying vec3 vColor;
+                varying float vAlpha;
                 void main() {
-                    vec4 texColor = texture2D(uTexture, gl_PointCoord);
-                    gl_FragColor = vec4(vColor, 1.0) * texColor;
+                    // Dibuja un círculo matemático perfecto
+                    float dist = length(gl_PointCoord - vec2(0.5));
+                    if (dist > 0.5) discard;
+                    
+                    // Centro brillante, bordes suaves
+                    float glow = exp(-dist * dist * 15.0); 
+                    float finalAlpha = max(glow, 0.2) * vAlpha;
+                    
+                    gl_FragColor = vec4(vColor, finalAlpha);
                 }
             `,
             transparent: true,
@@ -186,152 +168,198 @@
             vertexColors: true
         });
 
-        const materialPolvo = new THREE.PointsMaterial({
-            size: 4.0,
-            map: texPolvo,
-            transparent: true,
-            opacity: 0.6,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-            vertexColors: true
-        });
-
-        // 3. MATEMÁTICA DE LA ESPIRAL
-        const countEstrellas = 15000;
-        const countPolvo = 4000;
-        const radioGalaxia = 30;
+        // Configuración de la Galaxia
+        const countEstrellas = 25000;
+        const countPolvo = 8000;
+        const radioGalaxia = 25;
         const brazos = 4;
 
-        function crearGeometria(cantidad: number, isDust: boolean) {
+        function crearGeometriaGalaxia(cantidad: number, isDust: boolean) {
             const geo = new THREE.BufferGeometry();
             const positions = new Float32Array(cantidad * 3);
             const colors = new Float32Array(cantidad * 3);
             const sizes = new Float32Array(cantidad);
             const phases = new Float32Array(cantidad);
 
-            const colorCentro = new THREE.Color(0xfff4e0); // Blanco cálido brillante
+            const colorNucleo = new THREE.Color(0xfff5e6); // Blanco ultra brillante
             const colorRosa = new THREE.Color(0xff1493);
             const colorAzul = new THREE.Color(0x00f2fe);
-            const colorBorde = new THREE.Color(0x111133); // Oscuro
+            const colorBorde = new THREE.Color(0x001133); // Azul muy oscuro para el final
 
             for(let i = 0; i < cantidad; i++) {
-                // Concentrar muchísimo más en el núcleo
-                const radio = Math.pow(Math.random(), 2.5) * radioGalaxia; 
+                // Matemáticas: Math.pow(x, 4) concentra el 80% de las estrellas en el núcleo
+                const distribucion = Math.pow(Math.random(), 4); 
+                const radio = distribucion * radioGalaxia; 
+                
                 const angulo = (i % brazos) * ((Math.PI * 2) / brazos);
-                const giro = radio * 0.35; 
+                const giro = radio * 0.4; // Curva de los brazos
                 
-                // Dispersión (menos disperso en el centro, más en los bordes)
-                const dispersion = (Math.random() - 0.5) * (radio / radioGalaxia) * 3;
+                // Si es polvo cósmico, la dispersión es gigante
+                const dispersionRadio = isDust ? 6.0 : 1.5;
+                const dispersion = (Math.random() - 0.5) * (radio / radioGalaxia) * dispersionRadio;
                 
-                // Abultamiento central (Bulge galáctico)
-                const alturaBulge = (Math.random() - 0.5) * (4 * Math.exp(-radio/4));
+                // El centro es "gordo" (Bulge), los bordes son planos
+                const alturaMax = isDust ? 6.0 : 3.0;
+                const alturaBulge = (Math.random() - 0.5) * alturaMax * Math.exp(-radio/3);
 
-                positions[i*3] = Math.cos(angulo + giro) * radio + (Math.random() - 0.5) * dispersion;
-                positions[i*3+1] = alturaBulge + (isDust ? (Math.random()-0.5)*1.5 : 0);
-                positions[i*3+2] = Math.sin(angulo + giro) * radio + (Math.random() - 0.5) * dispersion;
+                positions[i*3] = Math.cos(angulo + giro) * radio + (Math.random()-0.5)*dispersion;
+                positions[i*3+1] = alturaBulge;
+                positions[i*3+2] = Math.sin(angulo + giro) * radio + (Math.random()-0.5)*dispersion;
 
-                // Color según la distancia al núcleo
-                let mixedColor = colorCentro.clone();
-                if(radio > 2) mixedColor.lerp(i%2==0 ? colorRosa : colorAzul, radio / (radioGalaxia * 0.5));
-                if(radio > radioGalaxia * 0.7) mixedColor.lerp(colorBorde, (radio - radioGalaxia*0.7) / (radioGalaxia*0.3));
+                // Color según distancia: Centro blanco -> Medio Rosa/Azul -> Puntas Oscuras
+                let mixedColor = colorNucleo.clone();
+                if(radio > 1) mixedColor.lerp(i%2==0 ? colorRosa : colorAzul, radio / (radioGalaxia * 0.4));
+                if(radio > radioGalaxia * 0.6) mixedColor.lerp(colorBorde, (radio - radioGalaxia*0.6) / (radioGalaxia*0.4));
+
+                // Atenuar brillo en las puntas para que desaparezca sutilmente
+                let intensidad = Math.max(0.1, 1.2 - (radio / radioGalaxia));
+                mixedColor.multiplyScalar(intensidad);
 
                 colors[i*3] = mixedColor.r;
                 colors[i*3+1] = mixedColor.g;
                 colors[i*3+2] = mixedColor.b;
 
-                // Tamaño y fase individual para el latido
-                sizes[i] = (Math.random() * 2) + 0.5;
+                // Tamaño: Polvo gigante, estrellas pequeñas.
+                sizes[i] = isDust ? (Math.random() * 8 + 4) : (Math.random() * 2 + 0.5);
                 phases[i] = Math.random() * Math.PI * 2;
             }
 
             geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-            if(!isDust) {
-                geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-                geo.setAttribute('phase', new THREE.BufferAttribute(phases, 1));
-            }
+            geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+            geo.setAttribute('phase', new THREE.BufferAttribute(phases, 1));
             return geo;
         }
 
-        const estrellas = new THREE.Points(crearGeometria(countEstrellas, false), materialEstrellas);
-        const polvo = new THREE.Points(crearGeometria(countPolvo, true), materialPolvo);
+        const estrellas = new THREE.Points(crearGeometriaGalaxia(countEstrellas, false), materialEstrellas);
+        const polvo = new THREE.Points(crearGeometriaGalaxia(countPolvo, true), materialEstrellas); // Usamos el mismo shader suavizado
         
         galaxiaGroup.add(estrellas);
         galaxiaGroup.add(polvo);
 
-        // --- RESPONSIVE 3D ---
+        // --- SISTEMA DE CÁMARA FLUIDA (LERP) ---
+        let targetCameraZ = 12;
+        let basePlanetY = 3;
+        let targetPlanetY = basePlanetY;
+        
+        let targetGalaxiaZ = -15; 
+        
+        let tiempoAsteroide = 0;
+        let tiempoShader = 0;
+        let modoGalaxia = false;
+        let velocidadGalaxia = 0.02; // Inicia rápido por el viaje
+
         function actualizarLayout3D() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
             
             if (window.innerWidth < 768) {
-                sistemaPlanetario.position.set(1.2, 4.5, -4);
+                basePlanetY = 4.5;
+                sistemaPlanetario.position.x = 1.2;
+                sistemaPlanetario.position.z = -4;
                 sistemaPlanetario.scale.set(0.5, 0.5, 0.5);
             } else {
-                sistemaPlanetario.position.set(4, 3, -2);
+                basePlanetY = 3;
+                sistemaPlanetario.position.x = 4;
+                sistemaPlanetario.position.z = -2;
                 sistemaPlanetario.scale.set(1, 1, 1);
             }
+            if(!modoGalaxia) targetPlanetY = basePlanetY;
         }
         window.addEventListener('resize', actualizarLayout3D);
         actualizarLayout3D(); 
 
-        let tiempoAsteroide = 0;
-        let modoGalaxia = false;
+        // --- EVENTOS DE BOTONES ---
+        const btnGalaxia = document.getElementById('btn-galaxia') as HTMLButtonElement;
+        const btnVolver = document.getElementById('btn-volver') as HTMLButtonElement;
         
-        // Físicas de la Galaxia
-        let tiempoShader = 0;
-        let velocidadGalaxia = 0.015; // Velocidad de giro inicial muy rápida (por el impulso)
+        let enViaje = false;
 
-        // --- EVENTO CLIC ---
         btnGalaxia.addEventListener('click', () => {
+            if(enViaje) return;
+            enViaje = true;
             modoGalaxia = true;
+            
+            // Ocultar UI de la Tierra
             document.getElementById('zona-scroll')!.style.display = 'none';
             document.getElementById('ui-textos')!.style.opacity = '0';
             btnGalaxia.style.opacity = '0';
             btnGalaxia.style.pointerEvents = 'none';
-            
             document.getElementById('lluvia-meteoritos')!.style.opacity = '0';
             document.getElementById('universo-fondo')!.style.opacity = '0';
             document.getElementById('nebulosa')!.style.opacity = '0'; 
             
             galaxiaGroup.visible = true;
+            velocidadGalaxia = 0.02; // Impulso inicial
+            
+            // Mover cámara y planetas
+            targetCameraZ = 3;
+            targetPlanetY = -10; // Hacia abajo
+            targetGalaxiaZ = 0; // Traer la galaxia al frente
+            
+            setTimeout(() => {
+                document.getElementById('ui-galaxia')!.classList.remove('oculto-total');
+                enViaje = false;
+            }, 2500);
         });
 
+        btnVolver.addEventListener('click', () => {
+            if(enViaje) return;
+            enViaje = true;
+            
+            // Ocultar UI de la Galaxia
+            document.getElementById('ui-galaxia')!.classList.add('oculto-total');
+            
+            // Mover cámara y planetas de regreso
+            targetCameraZ = 12;
+            targetPlanetY = basePlanetY;
+            targetGalaxiaZ = -15; // Alejar galaxia
+            
+            setTimeout(() => {
+                modoGalaxia = false;
+                galaxiaGroup.visible = false;
+                
+                document.getElementById('zona-scroll')!.style.display = 'block';
+                document.getElementById('lluvia-meteoritos')!.style.opacity = '1';
+                document.getElementById('universo-fondo')!.style.opacity = '1';
+                document.getElementById('nebulosa')!.style.opacity = '1'; 
+                
+                // Forzar actualización de scroll
+                window.dispatchEvent(new Event('scroll'));
+                enViaje = false;
+            }, 2000);
+        });
+
+        // BUCLE DE ANIMACIÓN
         function animate3D() {
           requestAnimationFrame(animate3D);
           
-          if(!modoGalaxia) {
-              earth.rotation.y += 0.001;       
-              clouds.rotation.y += 0.0015; 
-              moonPivot.rotation.y += 0.003;   
-              moon.rotation.y += 0.002;        
-              
-              tiempoAsteroide += 0.005;
-              asteroid.position.x = Math.cos(tiempoAsteroide * 0.8) * 8;
-              asteroid.position.y = Math.sin(tiempoAsteroide * 1.5) * 6;
-              asteroid.position.z = Math.sin(tiempoAsteroide * 1.2) * 5; 
-              asteroid.rotation.x += 0.02;
-              asteroid.rotation.y += 0.01;
-          } else {
-              // Hunden los planetas
-              sistemaPlanetario.position.y -= 0.15;
-              asteroid.position.y -= 0.15;
-              
-              // Viaje de cámara hacia la galaxia
-              if(camera.position.z > 3) camera.position.z -= 0.1;
-              
-              // --- EL LATIDO DE LAS ESTRELLAS (Siempre activo) ---
+          // Movimientos suaves de cámara y planetas
+          camera.position.z += (targetCameraZ - camera.position.z) * 0.02;
+          sistemaPlanetario.position.y += (targetPlanetY - sistemaPlanetario.position.y) * 0.03;
+          asteroid.position.y = sistemaPlanetario.position.y + Math.sin(tiempoAsteroide * 1.5) * 6; // El asteroide sigue la caída
+          galaxiaGroup.position.z += (targetGalaxiaZ - galaxiaGroup.position.z) * 0.02;
+
+          // Animación constante Planetas
+          earth.rotation.y += 0.001;       
+          clouds.rotation.y += 0.0015; 
+          moonPivot.rotation.y += 0.003;   
+          moon.rotation.y += 0.002;        
+          
+          tiempoAsteroide += 0.005;
+          asteroid.position.x = Math.cos(tiempoAsteroide * 0.8) * 8;
+          asteroid.position.z = Math.sin(tiempoAsteroide * 1.2) * 5; 
+          asteroid.rotation.x += 0.02;
+          asteroid.rotation.y += 0.01;
+
+          // Animación Galaxia
+          if(galaxiaGroup.visible) {
               tiempoShader += 0.01;
               starUniforms.uTime.value = tiempoShader;
               
-              // --- FRENADO CINÉTICO DE LA GALAXIA ---
-              if (velocidadGalaxia > 0.0002) { // 0.0002 es una flotación residual casi imperceptible
-                  velocidadGalaxia -= 0.00003; // Fricción suave
-              } else {
-                  velocidadGalaxia = 0.0002; // Se detiene y solo "flota"
-              }
-              
+              // Frenado físico: Va frenando hasta quedarse casi estática
+              velocidadGalaxia += (0.0001 - velocidadGalaxia) * 0.01; 
               galaxiaGroup.rotation.y += velocidadGalaxia;
           }
 
@@ -353,7 +381,6 @@
       
       let width: number, height: number;
       let estrellasFondo: any[] = []; 
-      let progresoScroll: number = 0;
 
       function iniciarFondo() {
         width = canvasFondo.width = window.innerWidth;
@@ -373,8 +400,11 @@
       }
 
       window.addEventListener('scroll', () => {
+        // Evitamos que el scroll haga cosas raras mientras estamos en la galaxia
+        if(document.getElementById('ui-galaxia')!.classList.contains('oculto-total') === false) return;
+
         const scrollMaximo = document.body.scrollHeight - window.innerHeight;
-        progresoScroll = Math.min(Math.max(window.scrollY / scrollMaximo, 0), 1);
+        let progresoScroll = Math.min(Math.max(window.scrollY / scrollMaximo, 0), 1);
         
         if(progresoScroll > 0.05) indicadorScroll.style.opacity = '0';
         else indicadorScroll.style.opacity = '0.7';
@@ -399,8 +429,10 @@
 
         if (progresoScroll > 0.95) {
             btnGalaxia2.classList.remove('oculto');
+            btnGalaxia2.style.pointerEvents = 'auto';
         } else {
             btnGalaxia2.classList.add('oculto');
+            btnGalaxia2.style.pointerEvents = 'none';
         }
       });
 
@@ -426,24 +458,23 @@
 </html>
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;800;900&display=swap');
 
   body, html {
     margin: 0; padding: 0;
-    background-color: #000000; /* Negro absoluto para contrastar la galaxia */
+    background-color: #000000; 
     color: white;
     font-family: 'Montserrat', sans-serif;
     overflow-x: hidden;
   }
   
-  .nebulosa { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 20% 30%, rgba(55, 20, 80, 0.4) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(20, 60, 100, 0.3) 0%, transparent 50%), radial-gradient(circle at 50% 100%, rgba(100, 20, 60, 0.25) 0%, transparent 60%); z-index: 0; transition: opacity 2s ease; }
-  
-  #universo-fondo { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; transition: opacity 2s ease; }
+  .nebulosa { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at 20% 30%, rgba(55, 20, 80, 0.4) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(20, 60, 100, 0.3) 0%, transparent 50%), radial-gradient(circle at 50% 100%, rgba(100, 20, 60, 0.25) 0%, transparent 60%); z-index: 0; transition: opacity 1.5s ease; }
+  #universo-fondo { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; transition: opacity 1.5s ease; }
   #contenedor-3d { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
-  #lluvia-meteoritos { z-index: 3; pointer-events: none; transition: opacity 2s ease; }
+  #lluvia-meteoritos { z-index: 3; pointer-events: none; transition: opacity 1.5s ease; }
   
-  /* --- INTERFAZ UI --- */
-  .ui-contenedor { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10; pointer-events: none; transition: opacity 1.5s ease; }
+  /* --- UI TIERRA --- */
+  .ui-contenedor { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10; pointer-events: none; transition: opacity 1s ease; }
 
   #foto-annarella {
     position: absolute; top: 15vh; left: 50%;
@@ -460,14 +491,12 @@
     transform: translate(-50%, 30px); text-align: center; display: flex; flex-direction: column; gap: 10px;
     opacity: 0; transition: transform 0.1s linear, opacity 0.1s linear;
   }
-
   .mensaje-elegante span { line-height: 1; letter-spacing: 4px; text-shadow: 0 0 20px rgba(255, 105, 180, 0.8), 0 0 40px rgba(0, 242, 254, 0.6); }
-
   .feliz { font-size: clamp(2rem, 8vw, 4rem); font-weight: 800; color: #fff; }
   .cumple { font-size: clamp(2.5rem, 10vw, 5rem); font-weight: 900; color: #fff; background: -webkit-linear-gradient(45deg, #ff69b4, #00f2fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .nombre { font-size: clamp(2rem, 8vw, 4rem); font-weight: 800; color: #fff; }
 
-  /* --- BOTÓN ABSOLUTAMENTE CLICABLE --- */
+  /* --- BOTÓN IR A GALAXIA --- */
   #btn-galaxia {
     position: fixed; bottom: 10vh; left: 50%; transform: translateX(-50%);
     padding: 15px 40px; font-size: 1.2rem; font-weight: 800; font-family: 'Montserrat', sans-serif;
@@ -476,9 +505,33 @@
     box-shadow: 0 0 20px rgba(255, 20, 147, 0.5), 0 0 40px rgba(0, 242, 254, 0.5);
     transition: all 0.5s ease; animation: palpitar 2s infinite;
   }
+  #btn-galaxia:hover { transform: translateX(-50%) scale(1.1); box-shadow: 0 0 30px rgba(255, 20, 147, 0.8), 0 0 60px rgba(0, 242, 254, 0.8); }
+  #btn-galaxia.oculto { opacity: 0; pointer-events: none !important; transform: translateX(-50%) translateY(20px); }
 
-  #btn-galaxia:hover, #btn-galaxia:active { transform: translateX(-50%) scale(1.1); box-shadow: 0 0 30px rgba(255, 20, 147, 0.8), 0 0 60px rgba(0, 242, 254, 0.8); }
-  #btn-galaxia.oculto { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(20px); }
+  /* --- UI GALAXIA (NUEVO) --- */
+  .ui-galaxia {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    z-index: 60; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    background: radial-gradient(circle, rgba(0,0,0,0.4) 0%, transparent 80%);
+    transition: opacity 1.5s ease, transform 1.5s ease;
+  }
+  .ui-galaxia.oculto-total { opacity: 0; transform: scale(1.1); pointer-events: none; }
+  
+  .mensaje-romantico {
+    width: 85%; max-width: 600px;
+    text-align: center; font-size: clamp(1.2rem, 4vw, 1.8rem);
+    font-weight: 400; line-height: 1.5; color: #fff;
+    text-shadow: 0 0 10px rgba(255, 105, 180, 0.8), 0 0 20px rgba(0, 242, 254, 0.6);
+    margin-bottom: 40px;
+  }
+
+  #btn-volver {
+    padding: 12px 30px; font-size: 1rem; font-weight: 800; font-family: 'Montserrat', sans-serif;
+    color: white; background: transparent;
+    border: 2px solid #00f2fe; border-radius: 30px; cursor: pointer;
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.3); transition: all 0.3s ease;
+  }
+  #btn-volver:hover { background: rgba(0, 242, 254, 0.2); box-shadow: 0 0 25px rgba(0, 242, 254, 0.6); transform: scale(1.05); }
 
   @keyframes palpitar {
     0% { box-shadow: 0 0 20px rgba(255, 20, 147, 0.5), 0 0 40px rgba(0, 242, 254, 0.5); }
