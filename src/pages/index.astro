@@ -9,28 +9,18 @@
     <title>Feliz Cumpleaños Annarella</title>
   </head>
   <body>
-    <!-- Capa 0: Nebulosa -->
     <div class="nebulosa"></div>
     
-    <!-- Sistema Solar Realista -->
-    <div class="sistema-solar">
-      <div class="planeta-gigante"></div>
-      <div class="orbita-luna">
-        <div class="luna"></div>
-      </div>
-    </div>
+    <!-- Contenedor del Sistema Solar 3D REAL (Hecho más grande) -->
+    <div id="contenedor-3d"></div>
     
-    <!-- Capa 1: Lluvia de estrellas y meteoritos -->
     <div class="estrella-fugaz fugaz-1"></div>
     <div class="estrella-fugaz fugaz-2"></div>
     <div class="estrella-fugaz fugaz-3"></div>
     <div class="meteorito meteoro-1"></div>
     <div class="meteorito meteoro-2"></div>
 
-    <!-- Capa 2: La foto de la cumpleañera -->
     <img src="foto-annarella.jpg" alt="Annarella" id="foto-annarella" />
-
-    <!-- Capa 3: El lienzo de estrellas dinámicas -->
     <canvas id="universo"></canvas>
 
     <main class="contenedor-scroll">
@@ -40,6 +30,122 @@
     </main>
 
     <script>
+      // ==========================================
+      // MOTOR 3D: ILUMINACIÓN Y ASTEROIDE REALISTA
+      // ==========================================
+      import('https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js').then((THREE) => {
+        const contenedor3D = document.getElementById('contenedor-3d');
+        
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+        
+        // Activamos antialiasing para gráficos súper nítidos
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(800, 800); // Alta resolución interna
+        renderer.setPixelRatio(window.devicePixelRatio); // Soporte para móviles HD
+        renderer.domElement.style.width = '100%';
+        renderer.domElement.style.height = '100%';
+        contenedor3D.appendChild(renderer.domElement);
+
+        const textureLoader = new THREE.TextureLoader();
+        const earthTexture = textureLoader.load('https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Solarsystemscope_texture_8k_earth_daymap.jpg/1024px-Solarsystemscope_texture_8k_earth_daymap.jpg');
+        const moonTexture = textureLoader.load('https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Solarsystemscope_texture_8k_moon.jpg/512px-Solarsystemscope_texture_8k_moon.jpg');
+
+        // --- ILUMINACIÓN POTENCIADA PARA REVIVIR LOS COLORES ---
+        // 1. Luz ambiental muy fuerte para que nada quede negro
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); 
+        scene.add(ambientLight);
+        // 2. Luz de Sol intensa para crear el contraste esférico
+        const sunLight = new THREE.DirectionalLight(0xffffff, 3.5);
+        sunLight.position.set(-10, 8, 8); 
+        scene.add(sunLight);
+        // 3. Brillo atmosférico azulado en el centro
+        const atmLight = new THREE.PointLight(0x4488ff, 3, 20);
+        atmLight.position.set(2, 0, 3);
+        scene.add(atmLight);
+
+        // --- LA TIERRA ---
+        // Aumentamos los segmentos (64x64) para una esfera sin bordes poligonales
+        const earthGeo = new THREE.SphereGeometry(2.5, 64, 64); 
+        const earthMat = new THREE.MeshStandardMaterial({ 
+            map: earthTexture, 
+            roughness: 0.5, // Refleja un poco la luz (océanos)
+            metalness: 0.1
+        });
+        const earth = new THREE.Mesh(earthGeo, earthMat);
+        scene.add(earth);
+
+        // --- LA LUNA ---
+        const moonPivot = new THREE.Group();
+        scene.add(moonPivot);
+
+        const moonGeo = new THREE.SphereGeometry(0.6, 64, 64);
+        const moonMat = new THREE.MeshStandardMaterial({ 
+            map: moonTexture, 
+            roughness: 0.9 
+        });
+        const moon = new THREE.Mesh(moonGeo, moonMat);
+        moon.position.set(4.8, 0, 0); 
+        moonPivot.add(moon);
+
+        // --- EL ASTEROIDE REALISTA ---
+        // Usamos un Dodecaedro con mucha resolución geométrica
+        const asteroidGeo = new THREE.DodecahedronGeometry(0.5, 2);
+        
+        // Deformamos matemáticamente cada vértice para crear formas rocosas e irregulares
+        const posiciones = asteroidGeo.attributes.position;
+        for(let i = 0; i < posiciones.count; i++) {
+            // Factor de deformación aleatorio
+            const deformacion = 1 + (Math.random() * 0.4 - 0.2); 
+            posiciones.setXYZ(
+                i, 
+                posiciones.getX(i) * deformacion, 
+                posiciones.getY(i) * deformacion, 
+                posiciones.getZ(i) * deformacion
+            );
+        }
+        asteroidGeo.computeVertexNormals(); // Recalcula cómo golpea la luz en las nuevas grietas
+
+        const asteroidMat = new THREE.MeshStandardMaterial({ 
+            map: moonTexture, // Reciclamos la textura lunar para la piedra
+            roughness: 1.0,
+            color: 0xaaaaaa // Le damos un tinte gris metálico
+        });
+        const asteroid = new THREE.Mesh(asteroidGeo, asteroidMat);
+        scene.add(asteroid);
+
+        camera.position.z = 8;
+        
+        // Variable para controlar el vuelo del asteroide
+        let tiempoAsteroide = 0;
+
+        function animate3D() {
+          requestAnimationFrame(animate3D);
+          
+          earth.rotation.y += 0.002;       
+          moonPivot.rotation.y += 0.003;   
+          moon.rotation.y += 0.005;        
+          
+          // El asteroide vuela haciendo una figura compleja (Lissajous)
+          tiempoAsteroide += 0.01;
+          asteroid.position.x = Math.cos(tiempoAsteroide * 0.8) * 6;
+          asteroid.position.y = Math.sin(tiempoAsteroide * 1.5) * 4;
+          // Pasa por detrás y por delante del sistema
+          asteroid.position.z = Math.sin(tiempoAsteroide * 1.2) * 6; 
+          
+          // Tumbos irregulares de rotación del asteroide
+          asteroid.rotation.x += 0.03;
+          asteroid.rotation.y += 0.04;
+          asteroid.rotation.z += 0.01;
+
+          renderer.render(scene, camera);
+        }
+        animate3D();
+      });
+
+      // ==========================================
+      // MOTOR 2D: TEXTO Y ESTRELLAS
+      // ==========================================
       const canvas = document.getElementById('universo');
       const ctx = canvas.getContext('2d');
       const foto = document.getElementById('foto-annarella');
@@ -210,70 +316,19 @@
     z-index: 0;
   }
 
-  /* --- SISTEMA SOLAR REALISTA --- */
-  .sistema-solar {
+  /* --- CONTENEDOR 3D --- */
+  #contenedor-3d {
     position: fixed;
-    top: 5%;
-    right: 5%;
-    width: clamp(150px, 25vw, 350px);
-    height: clamp(150px, 25vw, 350px);
+    /* Aumentado el tamaño y reposicionado para dar espacio al asteroide */
+    top: 0%;
+    right: 0%;
+    width: clamp(250px, 45vw, 600px);
+    aspect-ratio: 1;
     z-index: 1;
+    pointer-events: none;
+    filter: drop-shadow(0 0 40px rgba(100, 150, 255, 0.2));
   }
 
-  /* La Tierra */
-  .planeta-gigante {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    /* Textura fotográfica real de la Tierra */
-    background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Solarsystemscope_texture_8k_earth_daymap.jpg/1024px-Solarsystemscope_texture_8k_earth_daymap.jpg');
-    background-size: 200% 100%;
-    /* Sombra interna brutal para hacerla 3D (iluminada a la derecha, oscura a la izquierda) */
-    box-shadow: inset -50px -50px 80px rgba(0,0,0,0.95), inset 10px 10px 30px rgba(255,255,255,0.2), 0 0 50px rgba(100, 150, 255, 0.3);
-    animation: rotarTextura 40s linear infinite;
-  }
-
-  .orbita-luna {
-    position: absolute;
-    top: -15%;
-    left: -15%;
-    width: 130%;
-    height: 130%;
-    border-radius: 50%;
-    /* Hace que la luna dé vueltas alrededor de la Tierra */
-    animation: rotarOrbita 25s linear infinite;
-  }
-
-  /* La Luna */
-  .luna {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    /* Textura fotográfica real de la Luna */
-    background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Solarsystemscope_texture_8k_moon.jpg/512px-Solarsystemscope_texture_8k_moon.jpg');
-    background-size: 200% 100%;
-    /* Sombra interna para el efecto esférico */
-    box-shadow: inset -15px -15px 20px rgba(0,0,0,0.95);
-    transform: translateX(-50%);
-    animation: rotarTextura 25s linear infinite;
-  }
-
-  /* Animación que desliza el mapa para simular rotación esférica */
-  @keyframes rotarTextura {
-    from { background-position: 0% 0%; }
-    to { background-position: 200% 0%; }
-  }
-
-  @keyframes rotarOrbita {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  /* --- LA FOTO DE ANNARELLA --- */
   #foto-annarella {
     position: fixed;
     top: 40%; 
@@ -299,7 +354,6 @@
     pointer-events: none;
   }
   
-  /* --- ESTRELLAS FUGACES Y METEORITOS --- */
   .estrella-fugaz, .meteorito {
     position: fixed;
     border-radius: 50%;
