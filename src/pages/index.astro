@@ -12,7 +12,7 @@
     <!-- Capa 0: Nebulosa -->
     <div class="nebulosa"></div>
     
-    <!-- Sistema Solar Animado -->
+    <!-- Sistema Solar Realista -->
     <div class="sistema-solar">
       <div class="planeta-gigante"></div>
       <div class="orbita-luna">
@@ -27,7 +27,7 @@
     <div class="meteorito meteoro-1"></div>
     <div class="meteorito meteoro-2"></div>
 
-    <!-- Capa 2: La foto de la cumpleañera (Fíjate que ya no tiene la barra '/' al inicio) -->
+    <!-- Capa 2: La foto de la cumpleañera -->
     <img src="foto-annarella.jpg" alt="Annarella" id="foto-annarella" />
 
     <!-- Capa 3: El lienzo de estrellas dinámicas -->
@@ -66,14 +66,12 @@
         canvasTemp.height = height;
 
         ctxTemp.fillStyle = 'white';
-        // Ajustamos la fuente para que sea súper legible pero no se salga de los bordes
         let fontSize = width < 768 ? '10vw' : '7vw'; 
         ctxTemp.font = `900 ${fontSize} "Arial Black", sans-serif`; 
         ctxTemp.textAlign = 'center';
         ctxTemp.textBaseline = 'middle';
         
         const lineas = texto.split('\n');
-        // Bajamos el texto un poco más para que la foto respire
         const startY = height * 0.75; 
         const lineHeight = width < 768 ? height * 0.08 : height * 0.12; 
 
@@ -84,7 +82,6 @@
         const data = ctxTemp.getImageData(0, 0, width, height).data;
         puntosTexto = [];
         
-        // Saltamos de 6 en 6 píxeles. Esto dará mucha más definición a las letras.
         for (let y = 0; y < height; y += 6) {
           for (let x = 0; x < width; x += 6) {
             const alpha = data[(y * width + x) * 4 + 3];
@@ -99,7 +96,6 @@
         estrellasFondo = [];
         estrellasDinamicas = [];
 
-        // Fondo de estrellas
         for (let i = 0; i < 300; i++) {
           estrellasFondo.push({
             x: Math.random() * width,
@@ -110,7 +106,6 @@
           });
         }
 
-        // Estrellas dinámicas para formar la frase
         const numDinamicas = Math.max(puntosTexto.length, 500); 
         for (let i = 0; i < numDinamicas; i++) {
           const destino = puntosTexto[i] || {
@@ -142,11 +137,9 @@
         let progresoAcelerado = Math.min(progresoScroll * 2, 1);
         let interpolacion = 1 - Math.pow(1 - progresoAcelerado, 3);
 
-        // Controlar la aparición de la foto
         if (progresoAcelerado > 0.4) {
            let progresoFoto = Math.min((progresoAcelerado - 0.4) * 1.66, 1);
            foto.style.opacity = progresoFoto;
-           // Sube lentamente mientras aparece
            foto.style.transform = `translate(-50%, -60%) scale(${0.7 + (progresoFoto * 0.3)})`;
         } else {
            foto.style.opacity = 0;
@@ -217,60 +210,62 @@
     z-index: 0;
   }
 
-  /* --- SISTEMA SOLAR ORBITANDO --- */
+  /* --- SISTEMA SOLAR REALISTA --- */
   .sistema-solar {
     position: fixed;
     top: 5%;
     right: 5%;
-    width: clamp(150px, 20vw, 300px);
-    height: clamp(150px, 20vw, 300px);
+    width: clamp(150px, 25vw, 350px);
+    height: clamp(150px, 25vw, 350px);
     z-index: 1;
   }
 
+  /* La Tierra */
   .planeta-gigante {
     position: absolute;
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    /* Franjas diagonales para simular tormentas de gas en rotación */
-    background: repeating-linear-gradient(
-      45deg,
-      #1a202c,
-      #1a202c 20px,
-      #2d3748 20px,
-      #2d3748 40px
-    );
-    box-shadow: inset -30px -30px 50px rgba(0,0,0,0.9), 0 0 50px rgba(100, 150, 255, 0.2);
-    /* Gira sobre su propio eje */
-    animation: rotarPlaneta 40s linear infinite;
+    /* Textura fotográfica real de la Tierra */
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Solarsystemscope_texture_8k_earth_daymap.jpg/1024px-Solarsystemscope_texture_8k_earth_daymap.jpg');
+    background-size: 200% 100%;
+    /* Sombra interna brutal para hacerla 3D (iluminada a la derecha, oscura a la izquierda) */
+    box-shadow: inset -50px -50px 80px rgba(0,0,0,0.95), inset 10px 10px 30px rgba(255,255,255,0.2), 0 0 50px rgba(100, 150, 255, 0.3);
+    animation: rotarTextura 40s linear infinite;
   }
 
   .orbita-luna {
     position: absolute;
-    top: -20%;
-    left: -20%;
-    width: 140%;
-    height: 140%;
+    top: -15%;
+    left: -15%;
+    width: 130%;
+    height: 130%;
     border-radius: 50%;
-    /* Gira alrededor del planeta */
-    animation: rotarOrbita 20s linear infinite;
+    /* Hace que la luna dé vueltas alrededor de la Tierra */
+    animation: rotarOrbita 25s linear infinite;
   }
 
+  /* La Luna */
   .luna {
     position: absolute;
     top: 0;
     left: 50%;
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
-    background: #718096;
-    box-shadow: inset -10px -10px 20px rgba(0,0,0,0.8);
-    transform: translateX(-50%); /* Centra la luna en su línea de órbita */
+    /* Textura fotográfica real de la Luna */
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Solarsystemscope_texture_8k_moon.jpg/512px-Solarsystemscope_texture_8k_moon.jpg');
+    background-size: 200% 100%;
+    /* Sombra interna para el efecto esférico */
+    box-shadow: inset -15px -15px 20px rgba(0,0,0,0.95);
+    transform: translateX(-50%);
+    animation: rotarTextura 25s linear infinite;
   }
 
-  @keyframes rotarPlaneta {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+  /* Animación que desliza el mapa para simular rotación esférica */
+  @keyframes rotarTextura {
+    from { background-position: 0% 0%; }
+    to { background-position: 200% 0%; }
   }
 
   @keyframes rotarOrbita {
@@ -308,7 +303,7 @@
   .estrella-fugaz, .meteorito {
     position: fixed;
     border-radius: 50%;
-    z-index: 4; /* Ahora pasan por encima de todo */
+    z-index: 4; 
     opacity: 0;
   }
   
@@ -328,7 +323,6 @@
     background: linear-gradient(90deg, rgba(255,255,255,0.8), transparent);
   }
 
-  /* Meteoritos más grandes e imponentes */
   .meteorito {
     width: 8px;
     height: 8px;
@@ -345,7 +339,6 @@
     background: linear-gradient(90deg, #ff8c00, #ff0000, transparent);
   }
 
-  /* Distribución por la pantalla */
   .fugaz-1 { top: 20%; left: 100%; animation: animarFugaz 7s linear infinite; animation-delay: 1s; }
   .fugaz-2 { top: 60%; left: 110%; animation: animarFugaz 11s linear infinite; animation-delay: 4s; }
   .fugaz-3 { top: 85%; left: 120%; animation: animarFugaz 14s linear infinite; animation-delay: 8s; }
