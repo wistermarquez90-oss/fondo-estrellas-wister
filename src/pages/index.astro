@@ -9,18 +9,27 @@
     <title>Feliz Cumpleaños Annarella</title>
   </head>
   <body>
+    <!-- Capa 0: Nebulosa oscura -->
     <div class="nebulosa"></div>
     
+    <!-- Capa 1: Estrellas estáticas del fondo (Siempre detrás de los planetas) -->
+    <canvas id="universo-fondo"></canvas>
+
+    <!-- Capa 2: Motor 3D a pantalla completa (Planetas y Asteroide) -->
     <div id="contenedor-3d"></div>
     
+    <!-- Capa 3: Meteoritos CSS -->
     <div class="estrella-fugaz fugaz-1"></div>
     <div class="estrella-fugaz fugaz-2"></div>
     <div class="estrella-fugaz fugaz-3"></div>
     <div class="meteorito meteoro-1"></div>
     <div class="meteorito meteoro-2"></div>
 
+    <!-- Capa 4: Foto de Annarella -->
     <img src="/fondo-estrellas-wister/foto-annarella.jpg" alt="Annarella" id="foto-annarella" />
-    <canvas id="universo"></canvas>
+    
+    <!-- Capa 5: Estrellas dinámicas que forman la palabra (Siempre al frente) -->
+    <canvas id="universo-frente"></canvas>
 
     <main class="contenedor-scroll">
       <div class="indicador">
@@ -30,86 +39,135 @@
 
     <script>
       // ==========================================
-      // MOTOR 3D: ILUMINACIÓN Y ASTEROIDE
+      // MOTOR 3D: TIERRA HIPERREALISTA A PANTALLA COMPLETA
       // ==========================================
       import('https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js').then((THREE) => {
         const contenedor3D = document.getElementById('contenedor-3d');
         
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+        // Cámara ajustada a la pantalla completa
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.z = 12; // Cámara más alejada para ver todo el entorno
         
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        renderer.setSize(600, 600); 
-        // Limitamos el pixel ratio a 2 para que los celulares de gama baja no se queden sin memoria
+        renderer.setSize(window.innerWidth, window.innerHeight); 
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         renderer.domElement.style.width = '100%';
         renderer.domElement.style.height = '100%';
         contenedor3D.appendChild(renderer.domElement);
 
+        // Cargador de texturas (Usando repositorios oficiales sin bloqueo CORS)
         const textureLoader = new THREE.TextureLoader();
-        const earthTexture = textureLoader.load('https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Solarsystemscope_texture_8k_earth_daymap.jpg/1024px-Solarsystemscope_texture_8k_earth_daymap.jpg');
-        const moonTexture = textureLoader.load('https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Solarsystemscope_texture_8k_moon.jpg/512px-Solarsystemscope_texture_8k_moon.jpg');
+        const urlEarth = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg';
+        const urlSpecular = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_specular_2048.jpg';
+        const urlClouds = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png';
+        const urlMoon = 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/moon_1024.jpg';
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); 
+        // --- ILUMINACIÓN REALISTA ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); // Luz de fondo tenue
         scene.add(ambientLight);
-        const sunLight = new THREE.DirectionalLight(0xffffff, 3.5);
-        sunLight.position.set(-10, 8, 8); 
+        
+        const sunLight = new THREE.DirectionalLight(0xffffff, 2.5); // El Sol pegando desde la izquierda
+        sunLight.position.set(-10, 5, 5); 
         scene.add(sunLight);
-        const atmLight = new THREE.PointLight(0x4488ff, 3, 20);
+        
+        const atmLight = new THREE.PointLight(0x4488ff, 1.5, 20); // Resplandor azulado atmosférico
         atmLight.position.set(2, 0, 3);
         scene.add(atmLight);
 
+        // --- SISTEMA TIERRA-LUNA (Grupo para moverlos juntos) ---
+        const sistemaPlanetario = new THREE.Group();
+        scene.add(sistemaPlanetario);
+
+        // 1. La Tierra con reflejos oceánicos
         const earthGeo = new THREE.SphereGeometry(2.5, 64, 64); 
-        const earthMat = new THREE.MeshStandardMaterial({ 
-            map: earthTexture, 
-            roughness: 0.5, 
-            metalness: 0.1
+        const earthMat = new THREE.MeshPhongMaterial({ 
+            map: textureLoader.load(urlEarth),
+            specularMap: textureLoader.load(urlSpecular), // Solo brilla el agua
+            specular: new THREE.Color('grey'),
+            shininess: 30
         });
         const earth = new THREE.Mesh(earthGeo, earthMat);
-        scene.add(earth);
+        sistemaPlanetario.add(earth);
 
+        // 2. Capa de nubes independiente que gira a otra velocidad
+        const cloudGeo = new THREE.SphereGeometry(2.55, 64, 64);
+        const cloudMat = new THREE.MeshLambertMaterial({
+            map: textureLoader.load(urlClouds),
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending // Hace que las nubes se iluminen realísticamente
+        });
+        const clouds = new THREE.Mesh(cloudGeo, cloudMat);
+        sistemaPlanetario.add(clouds);
+
+        // 3. La Luna
         const moonPivot = new THREE.Group();
-        scene.add(moonPivot);
+        sistemaPlanetario.add(moonPivot);
 
         const moonGeo = new THREE.SphereGeometry(0.6, 64, 64);
-        const moonMat = new THREE.MeshStandardMaterial({ map: moonTexture, roughness: 0.9 });
+        const moonMat = new THREE.MeshStandardMaterial({ 
+            map: textureLoader.load(urlMoon), 
+            roughness: 0.9 
+        });
         const moon = new THREE.Mesh(moonGeo, moonMat);
         moon.position.set(4.8, 0, 0); 
         moonPivot.add(moon);
 
-        const asteroidGeo = new THREE.DodecahedronGeometry(0.5, 2);
+        // --- ASTEROIDE DEFORMADO HIPERREALISTA ---
+        const asteroidGeo = new THREE.DodecahedronGeometry(0.8, 3); // Nivel 3 de detalle = más polígonos
         const posiciones = asteroidGeo.attributes.position;
         for(let i = 0; i < posiciones.count; i++) {
-            const deformacion = 1 + (Math.random() * 0.4 - 0.2); 
-            posiciones.setXYZ(i, posiciones.getX(i) * deformacion, posiciones.getY(i) * deformacion, posiciones.getZ(i) * deformacion);
+            const deformacion = 1 + (Math.random() * 0.4 - 0.2); // Rompe la esfera para hacerla una roca
+            posiciones.setXYZ(i, posiciones.getX(i)*deformacion, posiciones.getY(i)*deformacion, posiciones.getZ(i)*deformacion);
         }
         asteroidGeo.computeVertexNormals(); 
 
         const asteroidMat = new THREE.MeshStandardMaterial({ 
-            map: moonTexture, 
-            roughness: 1.0,
+            map: textureLoader.load(urlMoon), // Usamos roca lunar
+            roughness: 0.8,
             color: 0xaaaaaa 
         });
         const asteroid = new THREE.Mesh(asteroidGeo, asteroidMat);
-        scene.add(asteroid);
+        scene.add(asteroid); // El asteroide no pertenece al grupo del planeta, va libre
 
-        camera.position.z = 8;
+        // --- ADAPTACIÓN RESPONSIVA DEL ENTORNO 3D ---
+        function actualizarLayout3D() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Si es celular, ubicamos la Tierra arriba a la derecha y más pequeña
+            if (window.innerWidth < 768) {
+                sistemaPlanetario.position.set(1.5, 4, -3);
+                sistemaPlanetario.scale.set(0.6, 0.6, 0.6);
+            } else {
+                sistemaPlanetario.position.set(4, 3, -2);
+                sistemaPlanetario.scale.set(1, 1, 1);
+            }
+        }
+        window.addEventListener('resize', actualizarLayout3D);
+        actualizarLayout3D(); // Ejecutar al inicio
+
         let tiempoAsteroide = 0;
 
         function animate3D() {
           requestAnimationFrame(animate3D);
-          earth.rotation.y += 0.002;       
+          
+          earth.rotation.y += 0.001;       
+          clouds.rotation.y += 0.0015; // Las nubes giran más rápido
           moonPivot.rotation.y += 0.003;   
-          moon.rotation.y += 0.005;        
+          moon.rotation.y += 0.002;        
           
-          tiempoAsteroide += 0.01;
-          asteroid.position.x = Math.cos(tiempoAsteroide * 0.8) * 6;
-          asteroid.position.y = Math.sin(tiempoAsteroide * 1.5) * 4;
-          asteroid.position.z = Math.sin(tiempoAsteroide * 1.2) * 6; 
+          // Asteroide viajando por TODA la pantalla en órbitas amplias
+          tiempoAsteroide += 0.005;
+          asteroid.position.x = Math.cos(tiempoAsteroide * 0.8) * 8;
+          asteroid.position.y = Math.sin(tiempoAsteroide * 1.5) * 6;
+          asteroid.position.z = Math.sin(tiempoAsteroide * 1.2) * 5; 
           
-          asteroid.rotation.x += 0.03;
-          asteroid.rotation.y += 0.04;
-          asteroid.rotation.z += 0.01;
+          asteroid.rotation.x += 0.02;
+          asteroid.rotation.y += 0.01;
+          asteroid.rotation.z += 0.03;
 
           renderer.render(scene, camera);
         }
@@ -117,10 +175,13 @@
       });
 
       // ==========================================
-      // MOTOR 2D: TEXTO RESPONSIVO
+      // MOTOR 2D: DOS LIENZOS PARA SOLUCIONAR LAS CAPAS
       // ==========================================
-      const canvas = document.getElementById('universo');
-      const ctx = canvas.getContext('2d');
+      const canvasFondo = document.getElementById('universo-fondo');
+      const ctxFondo = canvasFondo.getContext('2d');
+      const canvasFrente = document.getElementById('universo-frente');
+      const ctxFrente = canvasFrente.getContext('2d');
+      
       const foto = document.getElementById('foto-annarella');
       
       let width, height;
@@ -129,11 +190,15 @@
       let puntosTexto = [];
       let progresoScroll = 0;
 
-      function iniciar() {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
+      function iniciar2D() {
+        width = window.innerWidth;
+        height = window.innerHeight;
         
-        // Si la pantalla es angosta (celular), dividimos el texto en 3 líneas
+        canvasFondo.width = width;
+        canvasFondo.height = height;
+        canvasFrente.width = width;
+        canvasFrente.height = height;
+        
         const esMovil = width < 768;
         const textoMostrar = esMovil ? "FELIZ\nCUMPLEAÑOS\nANNARELLA" : "FELIZ CUMPLEAÑOS\nANNARELLA";
         
@@ -148,15 +213,14 @@
         canvasTemp.height = height;
 
         ctxTemp.fillStyle = 'white';
-        // Ajustamos la fuente dinámicamente
         let fontSize = esMovil ? '12vw' : '7vw'; 
         ctxTemp.font = `900 ${fontSize} "Arial Black", sans-serif`; 
         ctxTemp.textAlign = 'center';
         ctxTemp.textBaseline = 'middle';
         
         const lineas = texto.split('\n');
-        // Si es móvil, empezamos a escribir un poco más arriba para que quepan las 3 líneas
-        const startY = esMovil ? height * 0.65 : height * 0.75; 
+        // Bajamos el texto en móvil para que no choque con la foto
+        const startY = esMovil ? height * 0.70 : height * 0.75; 
         const lineHeight = esMovil ? height * 0.08 : height * 0.12; 
 
         lineas.forEach((linea, index) => {
@@ -166,7 +230,6 @@
         const data = ctxTemp.getImageData(0, 0, width, height).data;
         puntosTexto = [];
         
-        // En móviles leemos cada 8 píxeles para no sobrecargar de estrellas. En PC cada 6.
         const saltoPixels = esMovil ? 8 : 6;
         for (let y = 0; y < height; y += saltoPixels) {
           for (let x = 0; x < width; x += saltoPixels) {
@@ -182,8 +245,7 @@
         estrellasFondo = [];
         estrellasDinamicas = [];
 
-        // Menos estrellas de fondo en móviles para cuidar la batería y fluidez (150 vs 300)
-        const cantidadFondo = esMovil ? 150 : 300;
+        const cantidadFondo = esMovil ? 200 : 350;
         for (let i = 0; i < cantidadFondo; i++) {
           estrellasFondo.push({
             x: Math.random() * width,
@@ -219,8 +281,10 @@
         progresoScroll = Math.min(Math.max(window.scrollY / scrollMaximo, 0), 1);
       });
 
-      function animar() {
-        ctx.clearRect(0, 0, width, height);
+      function animar2D() {
+        ctxFondo.clearRect(0, 0, width, height);
+        ctxFrente.clearRect(0, 0, width, height);
+        
         const tiempo = Date.now() * 0.001; 
         let progresoAcelerado = Math.min(progresoScroll * 2, 1);
         let interpolacion = 1 - Math.pow(1 - progresoAcelerado, 3);
@@ -228,22 +292,24 @@
         if (progresoAcelerado > 0.4) {
            let progresoFoto = Math.min((progresoAcelerado - 0.4) * 1.66, 1);
            foto.style.opacity = progresoFoto;
-           // Sube suavemente (ajustado para que en el celular no tape las letras)
-           let offsetAlto = width < 768 ? '-70%' : '-60%';
+           // En celular sube mucho más para quedar justo encima del texto
+           let offsetAlto = width < 768 ? '-85%' : '-60%';
            foto.style.transform = `translate(-50%, ${offsetAlto}) scale(${0.7 + (progresoFoto * 0.3)})`;
         } else {
            foto.style.opacity = 0;
            foto.style.transform = `translate(-50%, -50%) scale(0.7)`;
         }
 
+        // Se dibuja en ctxFondo (Detrás del planeta y la foto)
         estrellasFondo.forEach(estrella => {
           let oscilacion = Math.sin(tiempo * estrella.velocidadBrillo + estrella.faseBrillo);
-          ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + (oscilacion * 0.4)})`;
-          ctx.beginPath();
-          ctx.arc(estrella.x, estrella.y, estrella.tamano, 0, Math.PI * 2);
-          ctx.fill();
+          ctxFondo.fillStyle = `rgba(255, 255, 255, ${0.3 + (oscilacion * 0.4)})`;
+          ctxFondo.beginPath();
+          ctxFondo.arc(estrella.x, estrella.y, estrella.tamano, 0, Math.PI * 2);
+          ctxFondo.fill();
         });
 
+        // Se dibuja en ctxFrente (Por encima de TODO)
         estrellasDinamicas.forEach(estrella => {
           let xActual = estrella.xInicial + (estrella.xDestino - estrella.xInicial) * interpolacion;
           let yActual = estrella.yInicial + (estrella.yDestino - estrella.yInicial) * interpolacion;
@@ -252,27 +318,26 @@
           let tamanoActual = estrella.tamanoBase + (oscilacion * 0.3);
 
           if (estrella.formaTexto && progresoAcelerado > 0.6) {
-            ctx.fillStyle = `rgba(255, 105, 180, ${progresoAcelerado * 0.5})`; 
-            ctx.beginPath();
-            ctx.arc(xActual, yActual, tamanoActual * 3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = 'rgba(255, 255, 255, 1)'; 
+            ctxFrente.fillStyle = `rgba(255, 105, 180, ${progresoAcelerado * 0.5})`; 
+            ctxFrente.beginPath();
+            ctxFrente.arc(xActual, yActual, tamanoActual * 3, 0, Math.PI * 2);
+            ctxFrente.fill();
+            ctxFrente.fillStyle = 'rgba(255, 255, 255, 1)'; 
           } else {
-            ctx.fillStyle = `rgba(255, 255, 255, ${0.5 + (oscilacion * 0.4)})`;
+            ctxFrente.fillStyle = `rgba(255, 255, 255, ${0.5 + (oscilacion * 0.4)})`;
           }
 
-          ctx.beginPath();
-          ctx.arc(xActual, yActual, tamanoActual, 0, Math.PI * 2);
-          ctx.fill();
+          ctxFrente.beginPath();
+          ctxFrente.arc(xActual, yActual, tamanoActual, 0, Math.PI * 2);
+          ctxFrente.fill();
         });
 
-        requestAnimationFrame(animar);
+        requestAnimationFrame(animar2D);
       }
 
-      // Si giran el celular, se recalcula todo
-      window.addEventListener('resize', iniciar);
-      iniciar();
-      animar();
+      window.addEventListener('resize', iniciar2D);
+      iniciar2D();
+      animar2D();
     </script>
   </body>
 </html>
@@ -300,51 +365,18 @@
     z-index: 0;
   }
 
-  /* --- CONTENEDOR 3D --- */
-  #contenedor-3d {
-    position: fixed;
-    top: 0%;
-    right: 0%;
-    width: clamp(250px, 45vw, 600px);
-    aspect-ratio: 1;
-    z-index: 1;
-    pointer-events: none;
-    filter: drop-shadow(0 0 40px rgba(100, 150, 255, 0.2));
-  }
-
-  /* --- LA FOTO DE ANNARELLA --- */
-  #foto-annarella {
-    position: fixed;
-    top: 40%; 
-    left: 50%;
-    width: clamp(200px, 40vw, 350px);
-    height: clamp(200px, 40vw, 350px);
-    object-fit: cover;
-    border-radius: 50%;
-    z-index: 2; 
-    box-shadow: 0 0 40px rgba(255, 105, 180, 0.5), 0 0 100px rgba(0, 242, 254, 0.3);
-    border: 3px solid rgba(255, 255, 255, 0.8);
-    pointer-events: none;
-    opacity: 0; 
-  }
-
-  #universo {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 3;
-    pointer-events: none;
-  }
+  /* ORDEN DE CAPAS PERFECTO (Z-INDEX) */
+  #universo-fondo { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; }
   
-  .estrella-fugaz, .meteorito {
-    position: fixed;
-    border-radius: 50%;
-    z-index: 4; 
-    opacity: 0;
-  }
+  #contenedor-3d { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2; pointer-events: none; }
   
+  .estrella-fugaz, .meteorito { position: fixed; border-radius: 50%; z-index: 3; opacity: 0; pointer-events: none; }
+  
+  #foto-annarella { position: fixed; top: 40%; left: 50%; width: clamp(200px, 40vw, 350px); height: clamp(200px, 40vw, 350px); object-fit: cover; border-radius: 50%; z-index: 4; box-shadow: 0 0 40px rgba(255, 105, 180, 0.5), 0 0 100px rgba(0, 242, 254, 0.3); border: 3px solid rgba(255, 255, 255, 0.8); pointer-events: none; opacity: 0; }
+  
+  #universo-frente { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 5; pointer-events: none; }
+
+  /* Estilos de las estrellas fugaces */
   .estrella-fugaz { width: 3px; height: 3px; background: white; box-shadow: 0 0 10px white; }
   .estrella-fugaz::after { content: ''; position: absolute; top: 50%; transform: translateY(-50%); width: 150px; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.8), transparent); }
 
@@ -364,39 +396,13 @@
     100% { transform: translateX(-2500px) translateY(1750px) rotate(-35deg); opacity: 0; }
   }
 
-  .contenedor-scroll {
-    position: relative;
-    height: 300vh;
-    z-index: 10;
-  }
+  .contenedor-scroll { position: relative; height: 300vh; z-index: 10; }
   
-  .indicador {
-    position: fixed;
-    top: 5%;
-    width: 100%;
-    text-align: center;
-    pointer-events: none;
-    opacity: 0.7;
-    text-shadow: 0px 0px 10px rgba(255,255,255,0.5);
-  }
+  .indicador { position: fixed; top: 5%; width: 100%; text-align: center; pointer-events: none; opacity: 0.7; text-shadow: 0px 0px 10px rgba(255,255,255,0.5); }
 
-  /* ==========================================
-     MEDIA QUERIES PARA CELULARES
-     ========================================== */
+  /* Media Queries Móviles Extras */
   @media (max-width: 768px) {
-    /* Achicamos el texto flotante de arriba */
-    .indicador h1 {
-      font-size: 5vw;
-    }
-    
-    /* El planeta 3D debe ser más pequeño y moverse hacia el borde */
-    #contenedor-3d {
-      width: 200px;
-      top: -2%;
-      right: -10%;
-    }
-    
-    /* La foto se hace un poco más pequeña y sube un poco para no tapar el texto de 3 líneas */
+    .indicador h1 { font-size: 5vw; }
     #foto-annarella {
       width: clamp(140px, 45vw, 220px);
       height: clamp(140px, 45vw, 220px);
