@@ -9,26 +9,17 @@
     <title>Feliz Cumpleaños Annarella</title>
   </head>
   <body>
-    <!-- Capa 0: Nebulosa oscura -->
     <div class="nebulosa"></div>
-    
-    <!-- Capa 1: Estrellas estáticas del fondo -->
     <canvas id="universo-fondo"></canvas>
-
-    <!-- Capa 2: Motor 3D a pantalla completa -->
     <div id="contenedor-3d"></div>
     
-    <!-- Capa 3: Meteoritos CSS -->
     <div class="estrella-fugaz fugaz-1"></div>
     <div class="estrella-fugaz fugaz-2"></div>
     <div class="estrella-fugaz fugaz-3"></div>
     <div class="meteorito meteoro-1"></div>
     <div class="meteorito meteoro-2"></div>
 
-    <!-- Capa 4: Foto de Annarella -->
     <img src="/fondo-estrellas-wister/foto-annarella.jpg" alt="Annarella" id="foto-annarella" />
-    
-    <!-- Capa 5: Estrellas dinámicas que forman la palabra -->
     <canvas id="universo-frente"></canvas>
 
     <main class="contenedor-scroll">
@@ -42,7 +33,7 @@
       // MOTOR 3D: TIERRA HIPERREALISTA A PANTALLA COMPLETA
       // ==========================================
       
-      // @ts-ignore - Le decimos a TypeScript que ignore este enlace externo
+      // @ts-ignore
       import('https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js').then((THREE) => {
         const contenedor3D = document.getElementById('contenedor-3d') as HTMLDivElement;
         
@@ -166,10 +157,9 @@
       });
 
       // ==========================================
-      // MOTOR 2D: SOLUCIÓN DE TIPOS DE TYPESCRIPT
+      // MOTOR 2D: SOLUCIÓN DE RESOLUCIÓN DE TEXTO PARA MÓVILES
       // ==========================================
       
-      // Añadimos 'as HTMLCanvasElement' para que TypeScript sepa qué elementos son
       const canvasFondo = document.getElementById('universo-fondo') as HTMLCanvasElement;
       const ctxFondo = canvasFondo.getContext('2d') as CanvasRenderingContext2D;
       
@@ -178,12 +168,12 @@
       
       const foto = document.getElementById('foto-annarella') as HTMLImageElement;
       
-      // Definimos estrictamente los tipos de las variables
       let width: number, height: number;
       let estrellasFondo: any[] = []; 
       let estrellasDinamicas: any[] = []; 
       let puntosTexto: any[] = [];
       let progresoScroll: number = 0;
+      let esMovilGlobal: boolean = false;
 
       function iniciar2D() {
         width = window.innerWidth;
@@ -194,14 +184,13 @@
         canvasFrente.width = width;
         canvasFrente.height = height;
         
-        const esMovil = width < 768;
-        const textoMostrar = esMovil ? "FELIZ\nCUMPLEAÑOS\nANNARELLA" : "FELIZ CUMPLEAÑOS\nANNARELLA";
+        esMovilGlobal = width < 768;
+        const textoMostrar = esMovilGlobal ? "FELIZ\nCUMPLEAÑOS\nANNARELLA" : "FELIZ CUMPLEAÑOS\nANNARELLA";
         
-        obtenerCoordenadasTexto(textoMostrar, esMovil);
-        crearEstrellas(esMovil);
+        obtenerCoordenadasTexto(textoMostrar, esMovilGlobal);
+        crearEstrellas(esMovilGlobal);
       }
 
-      // Parámetros tipados con string y boolean
       function obtenerCoordenadasTexto(texto: string, esMovil: boolean) {
         const canvasTemp = document.createElement('canvas');
         const ctxTemp = canvasTemp.getContext('2d') as CanvasRenderingContext2D;
@@ -209,7 +198,8 @@
         canvasTemp.height = height;
 
         ctxTemp.fillStyle = 'white';
-        let fontSize = esMovil ? '12vw' : '7vw'; 
+        // Letra un poco más pequeña en móvil para que no se desborde (9vw en lugar de 12vw)
+        let fontSize = esMovil ? '9vw' : '7vw'; 
         ctxTemp.font = `900 ${fontSize} "Arial Black", sans-serif`; 
         ctxTemp.textAlign = 'center';
         ctxTemp.textBaseline = 'middle';
@@ -225,7 +215,8 @@
         const data = ctxTemp.getImageData(0, 0, width, height).data;
         puntosTexto = [];
         
-        const saltoPixels = esMovil ? 8 : 6;
+        // CORRECCIÓN CRÍTICA: Escaneamos cada 4 píxeles en móvil para altísima definición
+        const saltoPixels = esMovil ? 4 : 6; 
         for (let y = 0; y < height; y += saltoPixels) {
           for (let x = 0; x < width; x += saltoPixels) {
             const alpha = data[(y * width + x) * 4 + 3];
@@ -251,7 +242,7 @@
           });
         }
 
-        const numDinamicas = Math.max(puntosTexto.length, esMovil ? 250 : 500); 
+        const numDinamicas = Math.max(puntosTexto.length, esMovil ? 400 : 500); 
         for (let i = 0; i < numDinamicas; i++) {
           const destino = puntosTexto[i] || {
             x: Math.random() * width,
@@ -263,7 +254,8 @@
             yInicial: Math.random() * height,
             xDestino: destino.x,
             yDestino: destino.y,
-            tamanoBase: Math.random() * 1.2 + 0.6, 
+            // Estrellas más pequeñas en móvil para que las letras se vean nítidas
+            tamanoBase: Math.random() * (esMovil ? 0.7 : 1.2) + (esMovil ? 0.4 : 0.6), 
             formaTexto: i < puntosTexto.length,
             faseBrillo: Math.random() * Math.PI * 2, 
             velocidadBrillo: Math.random() * 2 + 1 
@@ -286,7 +278,6 @@
 
         if (progresoAcelerado > 0.4) {
            let progresoFoto = Math.min((progresoAcelerado - 0.4) * 1.66, 1);
-           // Convertimos el número a string (texto) para que CSS lo acepte sin errores
            foto.style.opacity = progresoFoto.toString();
            let offsetAlto = width < 768 ? '-85%' : '-60%';
            foto.style.transform = `translate(-50%, ${offsetAlto}) scale(${0.7 + (progresoFoto * 0.3)})`;
@@ -313,7 +304,9 @@
           if (estrella.formaTexto && progresoAcelerado > 0.6) {
             ctxFrente.fillStyle = `rgba(255, 105, 180, ${progresoAcelerado * 0.5})`; 
             ctxFrente.beginPath();
-            ctxFrente.arc(xActual, yActual, tamanoActual * 3, 0, Math.PI * 2);
+            // Resplandor más sutil en móviles para no manchar las letras
+            let multiplicadorResplandor = esMovilGlobal ? 2 : 3;
+            ctxFrente.arc(xActual, yActual, tamanoActual * multiplicadorResplandor, 0, Math.PI * 2);
             ctxFrente.fill();
             ctxFrente.fillStyle = 'rgba(255, 255, 255, 1)'; 
           } else {
